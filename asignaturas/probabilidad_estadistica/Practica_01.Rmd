@@ -1,0 +1,338 @@
+---
+title: "Práctica 01 - Estadística Descriptiva"
+author: "Carlos M. Lopera-Gómez"
+date: "`r as.numeric(format(Sys.time(),'%Y'))`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include = F}
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load("formatR","markdown","tidyverse")
+knitr::opts_chunk$set(echo = T, comment = NA, warning = F, tidy.opts = list(width.cutoff = 60), tidy = T)
+```
+
+## Análisis de la base de datos `babies.txt`.
+
+Antes de leer la base de datos, veamos la descripción de las variables:
+
+1. bwt: baby’s weight at birth, to the nearest ounce (999 unknown).
+2. gestation: duration of the pregnancy in days, calculated from the first day of the last normal menstrual period (999 unknown).
+3. parity: indicator for whether the baby is the first born (1) or unknown (9).
+4. age: mother’s age at the time of conception, in years.
+5. height: Height of the mother, in inches (99 unknown).
+6. weight: Mother’s prepregnancy weight, in pounds (999 unknown).
+7. smoke: smoking status Indicator for whether the mother smokes (1) or not (0), (9=unknown).
+
+### Preparación, descarga y lectura desde Drive de un archivo de texto plano.
+
+Como la base de datos está en GoogleDrive se debe instalar y cargar la librería `googledrive`
+```{r}
+pacman::p_load("googledrive")
+```
+
+A continuación se requiere la URL donde está alojada la base de datos en GoogleDrive:
+```{r}
+url <- 'https://drive.google.com/file/d/1mCENUG5vR9Rpy9dvK5k_KknHi558CCeR'
+```
+
+El siguiente código hace la descarga desde Google Drive de una base de datos. **Nota**: en este proceso se deben dar todos los permisos desde la cuenta institucional de Google. Si por error no se sigue el procedimiento anterior, se requiere reconfigurar usando el comando `drive_auth()`, seleccionando la opción `0`.
+```{r}
+temp <- tempfile()
+dl <- drive_download(url, path = temp, overwrite = TRUE)
+babies <- read.table(dl$local_path, h = T, sep = "\t")
+```
+
+Para ver el encabezado de la base de datos descargada se usa el comando `head`, así:
+```{r}
+head(babies)
+```
+
+Para imprimir los estadísticos de resumen de las variables en la base de datos, se usa el comando `summary` de la siguiente forma:
+```{r}
+summary(babies)
+```
+
+A continuación, se definen las variables tipo `character` como variables tipo `factor` categórico, en principio de manera **nominal** (esto es, sin establecer orden entre las categorías, por defecto `R` toma las categorías en orden alfabético o numérico).
+```{r}
+babies$parity <- factor(babies$parity)
+babies$smoke <- factor(babies$smoke)
+```
+
+Ahora, veamos de nuevo los estadísticos de resumen de la base de datos,  incluyendo ahora las variables definidas como factores categóricos.
+```{r}
+summary(babies)
+```
+
+El comando `str` muestra la estructura de un objeto en `R`.
+```{r}
+str(babies)
+```
+
+Observe que cuando se aplica el comando `str` sobre una base de datos muestra:
+
+1. Dimensión de la base de datos,
+2. Cada variable, el tipo y los primeros 10 valores
+
+El comando `dim` imprime la dimensión (número de observaciones y número de variables) de una base de datos:
+```{r}
+dim(babies)
+```
+
+Si se quiere ver el peso de las madres `weight`, se usa sobre la base de datos el comando `$` y se indica la variable que se quiere visualizar, así:
+```{r}
+babies$weight
+```
+
+Otra forma de visualizar los valores de una variable, consiste en usar la posición de la variable dentro de la base de datos. Para ello se usa el comando `[<rows>,<cols>]` seguido de la base de datos y especificando qué filas o qué columnas se quieren visualizar. En este caso, los pesos de las madres están almacenados en la columna 6 de la base de datos, por lo cual el código es como sigue:
+```{r}
+babies[, 6]
+```
+
+Si por ejemplo, se quiere visualizar la información de las madres 2, 125, 569 y 830, se usa el comando `[<rows>,<cols>]` indicando que se quieren visualizar un conjunto de filas definida en un vector usando el comando `c(<c1>, <c2>, ...)`, así:
+```{r}
+babies[c(2, 125, 569, 830), ]
+```
+
+Suponga ahora que se quiere ver los valores de las variables `age` y `smoke` para las mujeres 40, 58, 69 y 256, se usan vectores tanto en las filas como en las columnas con la información requerida, así:
+```{r}
+babies[c(40, 58, 69, 256), c('age', 'smoke')]
+```
+
+## Tablas de frecuencias y Gráficas para variables Nominales u ordinales.
+
+Vamos a crear una variable ordinal de nombre `clase.peso` con una clasificación según peso, con las siguientes condiciones:
+
+* Recién nacidos con pesos inferiores a 100 onzas son considerados de peso **muy bajo**,
+* Recién nacidos con pesos entre 100 (inclusive) y 140 onzas se consideran con peso **bajo**,
+* Recién nacidos con pesos de 140 o más onzas se consideran de peso **adecuado**.
+
+Para ello usaremos el comando `ifelse`, el cual es un condicional que toma acciones si se cumple o no una condición. Este comando se puede usar de forma anidada, para definir una variable con categorías cualitativas basada en una variable cuantitativa, como se muestra a continuación:
+```{r}
+babies$clase.peso <- ifelse(babies$bwt < 100, "Muy bajo", ifelse(babies$bwt < 140, "Bajo", "Adecuado"))
+head(babies)
+str(babies)
+```
+
+Como se quiere que la variable `clase.peso` sea cualitativa ordinal, se debe convertir a `factor` cualitativo e indicar con la opción `levels` el orden de las categorías definidas, así:
+```{r}
+babies$clase.peso <- factor(babies$clase.peso, levels = c("Muy bajo", "Bajo", "Adecuado"))
+str(babies)
+```
+El comando `table` se usa para construir una tabla de frecuencias absolutas. Por ejemplo, para la variable `clase.peso`:
+```{r}
+(Frec.clase.peso <- table(babies$clase.peso))
+```
+
+Ahora, el comando `prop.table` sirve para obtener una tabla de frecuencias relativas. Por ejemplo, para la variable `clase.peso` se usa:
+```{r}
+(Frec.Rel.clase.peso <- prop.table(Frec.clase.peso) %>% round(4))
+```
+
+Para observar una tabla tanto con las frecuencias absolutas como con las frecuencias relativas para la variable `clase.peso`, se usa el comando `cbind` que pega dos o más vectores de igual tamaño por columna, así: (también se pueden pegar vectores por fila usando el comando `rbind`)
+```{r}
+cbind(Frec.clase.peso, Frec.Rel.clase.peso)
+```
+
+Veamos ahora como hacer un gráfico de barras para la variable `clase.peso` usando el comando `barplot`:
+```{r}
+barplot(Frec.Rel.clase.peso)
+```
+
+El gráfico anterior se puede mejorar usando más opciones en el comando `barplot`, así:
+```{r}
+barplot(Frec.Rel.clase.peso, main = 'Clasificación según el peso de los bebés', ylab = 'Frecuencia relativa', col = 'blue', las = 1, ylim = c(0, 0.8))
+```
+
+El comando `pie` sirve para dibujar un gráfico de torta. Por ejemplo,  para `clase.peso` se usa el siguiente código:
+```{r}
+pie(Frec.Rel.clase.peso)
+# Consultar ayuda del comando `pie`
+?pie
+```
+
+Nuevamente, este gráfico puede mejorarse. Por ejemplo, una nueva definición de etiquetas basadas en frecuencias relativas y el uso de otras opciones disponibles en el comando `pie` permiten obtener un gráfico de torta mejorado para la variable `clase.peso`, así:
+```{r}
+porcent <- paste(round(Frec.Rel.clase.peso*100, 2), "%", sep = "")
+newlabel <- paste(row.names(Frec.Rel.clase.peso), "\n(", porcent, ")", sep = "")
+pie(Frec.Rel.clase.peso, newlabel, radius = 1, main = 'Clasificación según el peso de los bebés')
+```
+
+### Tabla de frecuencias de dos vías (dos variables cualitativas).
+
+El comando `table` permite crear una tabla de frecuencias absolutas para dos variables cualitativas. Por ejemplo, para las variables `smoke` y `clase.peso` se obtiene:
+```{r}
+(tab1 <- table(babies$smoke, babies$clase.peso))
+```
+
+Ahora, el comando `prop.table` permite obtener una tabla de frecuencias relativas para las variables `smoke` y `clase.peso`. Adicionalmente, el comando `%>%` permite aplicar a un objeto `R` uno o más comandos adicionales en una misma instrucción. Por ejemplo, al objeto `tab2` que almacena las frecuencias relativas obtenidas con el comando `prop.table` se les hace un redondeo a 4 decimales usando el comando `round`, así:
+```{r}
+(tab2 <- prop.table(tab1) %>% round(4))
+```
+
+También se pueden calcular las proporciones por fila o columna usando la opción `margin` del comando `prop.table`. Por ejemplo, para calcular las frecuencias relativas de las variables `smoke` y `clase.peso` por fila (esto es, proporciones sobre los totales de fila) se usa lo siguiente:
+```{r}
+prop.table(tab2, margin = 1) %>% round(4)
+```
+
+Por otro lado, si se quiere una tabla de frecuencias relativas para `smoke` y `clase.peso` por columna se usa:
+```{r}
+prop.table(tab2, margin = 2) %>% round(4)
+```
+
+### Gráfico de barras para dos variables cualitativas.
+
+Veamos como usar el comando `barplot` para dibujar en un gráfico de barras las frecuencias de dos variables cualitativas. Por ejemplo, para las variables `smoke` y `clase.peso` se usa el código:
+```{r}
+barplot(tab2, main = 'Frecuencias relativas de clase.peso\n según si la madre es fumadora o no', beside = T, col = c("lightblue", "lightgreen"), ylim = c(0, 0.5), legend = T, las = 1, ylab = 'Frecuencia relativa')
+```
+
+## Estadísticos y gráficos para variables cuantitativas
+
+Comenzaremos con las medidas de tendencia central, de variabilidad, de posición y de correlación.
+
+### Medidas de tendencia central
+
+Para saber cuál es el peso promedio de los bebés en la base de datos usamos el comando `mean`, así:
+```{r}
+mean(babies$bwt)
+```
+
+El comando `median` permite calcular el peso mediano de los bebés, así:
+```{r}
+median(babies$bwt)
+```
+
+### Medidas de varibilidad
+La varianza del peso de los bebés se obtiene con el comando `var`:
+```{r}
+var(babies$bwt)
+```
+
+Y la desviación estándar del peso de los bebés se obtiene usando el comando `sd`:
+```{r}
+sd(babies$bwt)
+```
+
+### Construcción de un histograma de frecuencias
+
+Primero se debe construir una tabla de frecuencias para el peso de los bebés, con un número de intervalos de clase adecuado (regla de Sturges). El comando `hist` permite obtener una tabla de frecuencias para una variable cuantitativa en intervalos de clase, así:
+```{r}
+dist.peso <- hist(babies$bwt, plot = F)
+```
+
+El comando `cut` permite clasificar los datos de los pesos de los bebés de acuerdo a los intervalos de clase previamente obtenidos del comando `hist`:
+```{r}
+peso.cut <- cut(babies$bwt, dist.peso$breaks)
+```
+
+Con base en esta última variable se obtiene una tabla de frecuencias absolutas y relativas para los pesos de los bebés, así:
+```{r}
+frec.peso <- table(peso.cut)
+frec.rel.peso <- frec.peso/nrow(babies)
+(dist.frec.peso <- cbind(frec.peso, frec.rel.peso = frec.rel.peso %>% round(4)))
+```
+
+A continuación se usará el comando `hist` para obtener un histograma, modificando la opción `freq` que cambia de un histograma de frecuencias `freq = T` a uno de densidades `freq = F`.
+```{r}
+hist(babies$bwt, freq = T)
+hist(babies$bwt, freq = F)
+```
+
+Como un histograma de densidades no es equivalente a un histograma de frecuencias relativas se procede a redefinir los conteos dentro del objeto `dist.peso` para incluir las frecuencias relativas de los pesos de los bebés en los intervalos de clase previamente definidos.
+```{r}
+(dist.peso$counts <- round(frec.rel.peso, 3))
+```
+
+Finalmente, la gráfica se produce usando el comando `plot` sobre el objeto `dist.peso` que tiene la información de intervalos de clase y frecuencias relativas para producir el histograma de frecuencias relativas, así:
+```{r}
+plot(dist.peso, main = "Histograma para los pesos de los bebés", las = 1, col = "blue", xlab = "Peso (onzas)", ylab = "Frecuencia relativa", ylim = c(0, 0.25))
+```
+
+### Boxplots
+
+Se comienza con un gráfico para el peso de los bebés, usando el comando `boxplot`, así: (la opción `outline` controla si se marcan los valores extremos `outline = T` o no `outline = F`)
+```{r}
+boxplot(babies$bwt, outline = F)
+```
+
+Usando más opciones del comando `boxplot` se puede obtener una mejor apariencia en el gráfico. La opción `horizontal` controla si el boxplot se dibuja de manera horizontal `outline = T` o de forma vertical `outline = F`.
+```{r}
+boxplot(babies$bwt, main = 'Babies weight', horizontal = T, xlab = 'Weight (ounces)', col = "blue")
+```
+
+### Medidas de posición
+
+El comando `quantile` se usa para calcular medidas de posición, tales como el primer cuartil `Q1`, el cuarto decil `D4` y el percentil 90 `P90` para por ejemplo el peso de los bebes, así: (la opción `probs` sirve para indicar en qué vector de valores de `p` se van a calcular los cuantiles)
+```{r}
+quantile(babies$bwt, probs = c(0.25, 0.40, 0.90))
+```
+
+### Análisis estadístico de una variable cuantitativa en los distintos niveles de una variable cualitativa.
+
+Veamos algunos ejemplos para este tipo de análisis usando el comando `tapply`:
+
+* Cambia el peso promedio de los bebés al ser fumadora o no la madre?
+```{r}
+tapply(babies$bwt, babies$smoke, mean)
+```
+
+* Cambia la varianza del peso de los bebés al ser fumadora o no la madre?
+```{r}
+tapply(babies$bwt, babies$smoke, var)
+```
+
+* Cambia la desv. estándar del peso de los bebés al ser fumadora o no la madre?
+```{r}
+tapply(babies$bwt, babies$smoke, sd)
+```
+
+* Como son los cuartiles para el peso de los bebés de fumadoras y no fumadoras?
+```{r}
+tapply(babies$bwt, babies$smoke, quantile, probs=c(0.25, 0.50, 0.75))
+```
+
+### Boxplots para una variable cuantitativa en los diferentes niveles de una variable categórica
+
+Para ilustrar esto, a continuación se grafican boxplots del peso de los bebés para madres fumadoras y no fumadoras, así:
+```{r}
+boxplot(babies$bwt ~ babies$smoke, las = 1, main = 'Babies weight given smoke status', xlab = 'Does the mother smoke?', ylab = 'Weight (ounces)', col = c("lightblue", "lightgreen"))
+```
+
+### Medidas de correlación
+
+Veamos cómo calcular la correlación entre los pesos de los bebés y los pesos de las madres, usando el comando `cor`:
+```{r}
+cor(babies$bwt, babies$weight)
+```
+
+Note que en el resumen de las variables, el peso de las madres tenía 36 `NA's`, por lo que el resultado no se puede calcular, ya que la correlación requiere parejas de valores completos. Esto se puede solucionar con la opción `use` del comando `cor`, así:
+```{r}
+cor(babies$bwt, babies$weight, use = 'complete.obs')
+cor(babies$bwt, babies$weight, use = 'pairwise.complete.obs')
+```
+
+# Cuál es la relación entre los pesos del bebé y de la madre?
+plot(babies$weight, babies$bwt, xlab = 'Peso de la madre (libras)', ylab = 'Peso del bebé (onzas)')
+
+Un gráfico que permite visualizar la correlación entre dos variables cuantitativas es el **Gráfico de dispersión**, el cual se puede obtener usando el comando `plot` sobre las variables cuantitativas. Por ejemplo, un gráfico de dispersión entre los pesos de los bebés y los pesos de las madres, es como sigue: (note que se usa )
+```{r}
+babies2 <- na.omit(babies[,c('weight','bwt', 'smoke')])
+plot(babies2$weight, babies2$bwt, pch = 20, xlab = 'Peso de la madre (libras)', ylab = 'Peso del bebé (onzas)')
+```
+
+Suponga ahora que usted quiere diferenciar la correlación anterior diferenciando entre madres fumadoras y no fumadoras. La opción `col` le permite a través de colores hacer tal diferenciación, así:
+```{r}
+plot(babies2$weight, babies2$bwt, pch = 20, xlab = 'Peso de la madre (libras)', ylab = 'Peso del bebé (onzas)', col = as.factor(babies2$smoke))
+legend('bottomright', legend = c('No fumadoras', 'fumadores'), pch = 20, col = 1:2, inset = 0.05)
+```
+
+También se puede construir una matriz de correlaciones para variables cuantitativas. Por ejemplo, una matriz de correlaciones para las variables cuantitativas usa el siguiente código: (note que las variables en las columnas 3, 7 y 9 son cualitativas deben ser omitidas en este análisis y la opción `use = 'pairwise.complete.obs'` se asegura que en cada par de variables se usen todas las parejas de datos que no contienen `NA's`)
+```{r}
+cor(babies[, -c(3, 7:9)], use = 'pairwise.complete.obs')
+```
+
+## Ejercicio propuesto.
+
+1. Haga un análisis descriptivo de las variables *Paridad* (`parity`), *Edad de la madre* (`age`) y *Gestación* (`gestation`), que contenga tanto análisis gráficos como numéricos para tales variables. Considere definir la variable `grupo_edad` con los siguientes puntos de corte: 22, 30, 38, 45. En todos los análisis use solamente las filas que no tienen datos faltantes.
