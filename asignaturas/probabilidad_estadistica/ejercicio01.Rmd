@@ -1,0 +1,103 @@
+---
+title: "ejercicio01"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Ejercicio propuesto.
+Haga un análisis descriptivo de las variables Paridad (parity), Edad de la madre (age) y Gestación
+(gestation), que contenga tanto análisis gráficos como numéricos para tales variables. Considere definir
+la variable grupo_edad con los siguientes puntos de corte: 22, 30, 38, 45. En todos los análisis use
+solamente las filas que no tienen datos faltantes.
+
+## Descarga de datos
+```{r}
+pacman::p_load("googledrive")
+url <- 'https://drive.google.com/file/d/1mCENUG5vR9Rpy9dvK5k_KknHi558CCeR'
+path <- 
+drive_auth()
+drive_download(url,overwrite = TRUE)
+```
+## muestra de datos
+
+```{r}
+Bd.babies <- read.table('babies.txt', h = T, sep = "\t")
+head(Bd.babies)
+```
+## datos estadisticos de la base babies
+```{r}
+Bd.babies$parity <- factor(Bd.babies$parity)
+Bd.babies$smoke <- factor(Bd.babies$smoke)
+summary(Bd.babies)
+```
+## estructura de los datos
+```{r}
+str(Bd.babies)
+```
+## Tabla de frecuencias
+Vamos a crear una variable ordinal de nombre `grupo.edad` con una clasificación según la edad, con las siguientes condiciones:
+
+-   Menores a 22 años **grupo01**,
+-   Mayores/iguales a 22 y menores a 30 **grupo02**,
+-   Mayores/iguales a 30 y menores a 38 **grupo03**,
+-   Mayores/iguales a 38 **grupo04**,
+
+```{r}
+Bd.babies$grupo.edad <- ifelse(
+  Bd.babies$age < 22 , "grupo01",
+  ifelse(Bd.babies$age >= 22 & Bd.babies$age < 30 , "grupo02",
+         ifelse(Bd.babies$age >= 30 & Bd.babies$age < 38 , "grupo03","grupo04"))
+)
+
+Bd.babies$grupo.edad <- factor(Bd.babies$grupo.edad, levels = c("grupo01", "grupo02", "grupo03","grupo04"))
+str(Bd.babies)
+```
+##  frecuencia por grupo edad
+```{r}
+(Frecuencia.grupo.edad <- table(Bd.babies$grupo.edad))
+```
+
+# frecuencia relativa por grupo edad
+
+```{r}
+(Frecuencia.relativa.grupo.edad <- prop.table(Frecuencia.grupo.edad) %>% round(4))
+```
+
+
+## tabla de frecuencia absoluta y relativa por grupo edad
+
+```{r}
+cbind(Frecuencia.grupo.edad, Frecuencia.relativa.grupo.edad)
+```
+## barplot por grupo edad con la fecuencia relativa
+
+```{r}
+barplot(
+  Frecuencia.relativa.grupo.edad, 
+  main = 'Clasificación según el grupo edad', 
+  ylab = 'Frecuencia relativa', 
+  col = 'blue', 
+  las = 1, 
+  ylim = c(0, 0.6)
+  )
+```
+## tabla de frecuencia en 2 vias.
+```{r}
+(tab1 <- table(Bd.babies$parity, Bd.babies$grupo.edad))
+```
+## tabla frecuencias relativas
+
+```{r}
+(tab2 <- prop.table(tab1) %>% round(4))
+```
+## bar plot
+```{r}
+barplot(tab2, main = 'Frecuencias relativas de grupo edad\n según si la madre va tener el primer hijo', beside = T, col = c("lightblue", "lightgreen"), ylim = c(0, 0.5), legend = T, las = 1, ylab = 'Frecuencia relativa')
+```
+```
+
+
