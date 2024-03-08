@@ -1,0 +1,2348 @@
+---
+title: "Chapter 3"
+subtitle: "Distribución Normal Multivariada"
+output:
+  html_document: default
+  pdf_document:
+    number_sections: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+````{r setup, include = F}
+library(knitr)
+if(!require(pacman)) install.packages("pacman"); library(pacman)
+pacman::p_load("tidyverse", "knitr", "HH",
+               "magrittr","readr","readxl","Amelia","janitor",
+               "leaps","MASS","clusterGeneration")
+
+knitr::opts_chunk$set(fig.path = 'figurasR/',
+                      echo = FALSE, warning = FALSE, message = FALSE,fig.pos="H",fig.align="center",out.width="70%",
+                      cache=FALSE,comment = NA)
+
+source("funcionesR/funciones.R", local = knitr::knit_global())
+````
+
+
+# Distribución Normal Multivariada {#Normal-Multiv}
+
+
+## Geometría y propiedades de la NM {#geometria-NM}
+
+Existen varias formas de identificar si un vector aleatorio es distribuido normal multivariado, o mejor dicho de identificar si es o no es un vector aleatorio con distribución de probabilidad normal-multivariado, entre ellas están:
+
+* Usando la f.d.p. de dicho vector.
+* Usando una caracterización de la distribución NM basada en la normal univariada.
+* Usando la función generadora de momentos.
+
+## Normal Univariada
+
+Una v.a $X\sim N(\mu,\sigma^2)$, si su f.d.p es:
+$$
+\begin{align*}
+f(x)&=\frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{1}{2\sigma^2}(x-\mu)^2}\\ \\
+&=(2\pi)^{-\frac{1}{2}}\times (\sigma^2)^{-\frac{1}{2}}\times e^{-\frac{1}{2}\left(\frac{ x-\mu}{\sigma}\right)^2}\\ 
+\\
+&=(2\pi)^{-\frac{1}{2}}\times (\sigma^2)^{-\frac{1}{2}}\times e^{-\frac{1}{2}(x-\mu)(\sigma^2)^{-1}(x-\mu)}\\ \\ 
+&=(2\pi)^{-\frac{1}{2}}\times (\sigma^2)^{-\frac{1}{2}}\times e^{-\frac{1}{2}(x-\mu)^t(\sigma^2)^{-1}(x-\mu)}
+\end{align*}
+$$
+
+donde, $E[X]=\mu$ y $Var[X]=\sigma^2$.
+
+**NOTA**: Notar que $\left(\frac{ X-\mu}{\sigma}\right)^2=(X-\mu)(\sigma^2)^{-1}(X-\mu)$, es el cuadrado de la distancia entre $X$ y $\mu$ escalada por su desviación estándar. 
+
+## Normal Multivariada
+
+En el caso multivariado, se trabaja con la distancia de Mahalanobis entre el vector aleatorio $\underline{\mathbf{x}}$ y su vector de media poblacional $\underline{\boldsymbol{\mu}}$, es decir, con:
+$$
+(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}}),
+$$
+
+donde, $E[\underline{\mathbf{x}}]=\underline{\boldsymbol{\mu}}$ y $Var[\underline{\mathbf{x}}]=\mathbf{\Sigma}$.
+
+**Definición:**
+Sea $\underline{\mathbf{x}}$ un vector aleatorio $p$-dimensional, ie. 
+$\underline{\mathbf{x}}\in \mathbb{R}^p$. Se dice que $\underline{\mathbf{x}}$ tiene una distribución aleatoria Normal-Multivariada (o normal $p$-variada), con vector de medias $\underline{\boldsymbol{\mu}}$ y matriz de Var-Cov $\mathbf{\Sigma}$, lo cual se denota por: 
+$\underline{\mathbf{x}} \sim N_p \bigl(\underline{\boldsymbol{\mu}}\ , \  \mathbf{\Sigma}\bigr)$, si su f.d.p multivariada está dada por:
+
+$$
+f(\underline{\mathbf{x}})=(2\pi)^{-\frac{p}{2}}\times |\mathbf{\Sigma}|^{-\frac{1}{2}}\times e^{-\frac{1}{2}(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})}
+$$
+
+
+## Algunos Aspectos Geométricos de la NM
+
+* La expresión $(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})=c^2$, en la cual se basa el exponente de la f.d.p. normal multivariada, corresponde a un hiper-elipsoide, para culaquier contante $c>0$, el cual está centrado en $\underline{\boldsymbol{\mu}}$ y sus ejes están dados por: $\pm c\sqrt{\lambda_{\ i}}\ \underline{\mathbf{e}}_{\ i}$ para $i=1,2,\ldots,p$, donde.los $\lambda_{\ i}$-son los valores propios de $\mathbf{\Sigma}$ asociados a los respectivos vectores propios $\underline{\mathbf{e}}_{\ i}$.
+
+Para el caso de $p=3$-un Elipsoide, para el caso de $p=2$-una Elipse.
+
+
+```{r echo=F, cache=TRUE, contornos-prob5, fig.cap='Grafico de Algunos Exponentes de una NM', fig.show='hold', out.width='80%', fig.asp=.95, fig.align='center'}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(latex2exp)
+library(mvtnorm)
+texto1 <- latex2exp::TeX('(a) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto2 <- latex2exp::TeX('(b) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto3 <- latex2exp::TeX('(c) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto4 <- latex2exp::TeX('(d) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+#texto <- ""
+
+x <- seq(from=-1.1, to=3.1, length.out=30)
+y <- seq(from=-1.1, to=3.1, length.out=30)
+
+mu1=c(1,1)
+sigma1<-matrix(c(1,0,0,2),ncol=2)
+
+mu2=c(1,1)
+sigma2<-matrix(c(1,0,0,1),ncol=2)
+
+mu3=c(1,1)
+sigma3<-matrix(c(1,-1,-1,2),ncol=2)
+
+mu4=c(1,1)
+sigma4<-matrix(c(1,1,1,2),ncol=2)
+
+par(mar = c(5, 0, 0, 0))  # lineas de margenes
+par(mfrow=c(2,2))
+contorno(x,y,mu1,sigma1,texto1)
+contorno(x,y,mu2,sigma2,texto2)
+contorno(x,y,mu3,sigma3,texto3)
+contorno(x,y,mu4,sigma4,texto4)
+```
+
+$$
+(a) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 0 \\ 0 & 2  \end{bmatrix} \ \ \ \ (b) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 0 \\ 0 & 1  \end{bmatrix}
+$$
+
+$$
+(c) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & -1 \\ -1 & 2  \end{bmatrix} \ \ \ \ (d) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 1 \\ 1 & 2  \end{bmatrix}
+$$
+
+```{r echo=F, cache=TRUE, superficies-NB, fig.cap='Gráfico de Superficies NB', fig.show='hold', fig.width=7, fig.asp=0.8, out.width="600px", fig.align='center'}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(latex2exp)
+library(mvtnorm)
+texto1 <- latex2exp::TeX('(a) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto2 <- latex2exp::TeX('(b) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+#texto <- ""
+
+###
+
+mu1 <- c(1, 1)
+sigma1 <- matrix(c(1, 0, 0, 1), ncol=2)
+x <- seq(from=-4, to=6, length.out=60)
+y <- seq(from=-4, to=6, length.out=60)
+
+####
+mu2 <- c(1, 1)
+sigma2 <- matrix(c(1.2, 1, 1, 1.2), ncol=2)
+x <- seq(from=-4, to=6, length.out=60)
+y <- seq(from=-4, to=6, length.out=60)
+
+#par(mai = c(1, 1, .5, .5))  # pulgadas de margenes
+par(mar = c(0, 0, 0, 0))  # lineas de margenes
+par(mfrow=c(1,2))
+superficie(x,y,mu1,sigma1,texto1)
+superficie(x,y,mu2,sigma2,texto2)
+```
+
+$$
+(a) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 0 \\ 0 & 1  \end{bmatrix} \ \ \ , \ \mathbf{R}=\begin{bmatrix} 1 & 0 \\ 0 & 1  \end{bmatrix}
+$$
+
+$$
+(b) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 1 \\ 1 & 1.2  \end{bmatrix} \ \ , \ \mathbf{R}=\begin{bmatrix} 1 & 0.83 \\ 0.83 & 1  \end{bmatrix}
+$$
+
+```{r echo=F, cache=TRUE, contornos-superficies-NB, fig.cap='Gráfico de Contornos de Superficies NB', fig.show='hold', fig.width=7, fig.asp=0.8, out.width="600px", fig.align='center'}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(latex2exp)
+library(mvtnorm)
+texto1 <- latex2exp::TeX('(a) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto2 <- latex2exp::TeX('(b) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto3 <- latex2exp::TeX('(c) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto4 <- latex2exp::TeX('(d) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+#texto <- ""
+
+###
+
+mu1 <- c(1, 1)
+sigma1 <- matrix(c(1, 0, 0, 1), ncol=2)
+x <- seq(from=-4, to=6, length.out=60)
+y <- seq(from=-4, to=6, length.out=60)
+
+####
+mu2 <- c(1, 1)
+sigma2 <- matrix(c(1.2, 1, 1, 1.2), ncol=2)
+x <- seq(from=-4, to=6, length.out=60)
+y <- seq(from=-4, to=6, length.out=60)
+
+#par(mai = c(1, 1, .5, .5))  # pulgadas de margenes
+par(mar = c(5, 0, 0, 0))  # lineas de margenes
+par(mfrow=c(2,2))
+superficie(x,y,mu1,sigma1,texto1)
+contornos2(x,y,mu1,sigma1,texto2)
+superficie(x,y,mu2,sigma2,texto3)
+contornos2(x,y,mu2,sigma2,texto4)
+```
+
+En el gráfico (a) se observa la superficie (densidad) de una distribución normal-bivarianda con $\sigma_{11}=\sigma_{22}$ y $\rho_{12}=Corr(X_1,X_2)=0$
+
+En el gráfico (b) se observa la superficie (densidad) de una distribución normal-bivarianda con $\sigma_{11}=\sigma_{22}$ y $\rho_{12}=Corr(X_1,X_2)=0.83$. 
+
+Notar que la presencia de correlación causa que la probabilidad se concentre a lo largo de una línea.
+
+La densidad normal multivariada tiene un máximo valor cuando la distancia cuadrática  $(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}}-\underline{\boldsymbol{\mu}})$  es igual a cero, es
+decir, cuando $\underline{\mathbf{x}}=\underline{\boldsymbol{\mu}}$. Por tanto el punto $\underline{\boldsymbol{\mu}}$ es el punto de máxima densidad, o la moda, y también es la media, como se observa en la siguiente gráfica.
+
+
+**Mas Ejemplos:**
+
+```{r}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(mvtnorm)
+texto1 <- latex2exp::TeX('Gráfico de Datos NB \ \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+
+x <- seq(from=-1.1, to=3.1, length.out=30)
+y <- seq(from=-1.1, to=3.1, length.out=30)
+
+mu1=c(1,1)
+sigma1<-matrix(c(1,0,0,2),ncol=2)
+
+contorno(x,y,mu1,sigma1,texto1)
+```
+
+$$
+\underline{\boldsymbol{\mu}}=\begin{bmatrix} `r mu1[1]` \\ `r mu1[2]` \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} `r sigma1[1,1]` & `r sigma1[1,2]` \\ `r sigma1[2,1]` & `r sigma1[2,2]`  \end{bmatrix} \ \ \ \ (d) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 1 \\ 1 & 2  \end{bmatrix}
+$$
+
+
+
+```{r}
+library(mvtnorm)
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+mu=c(0,0,0)
+sigma<-matrix(c(1,0,0,0,1,0,0,0,1),ncol=3,byrow = TRUE)
+datos2<-rmvnorm(n=60, mu,sigma)
+head(datos2)
+representa1dat(datos2[,1:2],0.95,texto=" ")
+plot(datos2[,1],datos2[,2])
+```
+
+
+```{r echo=F, cache=TRUE, superficies-NB22, fig.cap='Gráfico de Superficies NB', fig.show='hold', fig.width=7, fig.asp=0.8, out.width="600px", fig.align='center'}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(latex2exp)
+library(mvtnorm)
+texto2 <- latex2exp::TeX('Gráfico de Superficie \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+#texto <- ""
+
+###
+mu=c(1,1)
+sigma<-matrix(c(1,0,0,2),ncol=2)
+#datos2<-mvrnorm(n=100, mu,sigma)
+
+x <- seq(from=-4, to=6, length.out=60)
+y <- seq(from=-4, to=6, length.out=60)
+
+superficie(x,y,mu,sigma,texto2)
+```
+
+$$
+\underline{\boldsymbol{\mu}}=\begin{bmatrix} `r mu1[1]` \\ `r mu1[2]` \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} `r sigma1[1,1]` & `r sigma1[1,2]` \\ `r sigma1[2,1]` & `r sigma1[2,2]`  \end{bmatrix} \ \ \ \ (d) \ \ \  \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix} 1 \\ 1 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 1 & 1 \\ 1 & 2  \end{bmatrix}
+$$
+
+```{r echo=F, cache=TRUE, contornos-superficies-NB22, fig.cap='Gráfico de Contornos de Superficies NB', fig.show='hold', fig.width=7, fig.asp=0.8, out.width="600px", fig.align='center'}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(latex2exp)
+library(mvtnorm)
+texto1 <- latex2exp::TeX('(a) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+texto2 <- latex2exp::TeX('(b) \ \ \ Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+#texto <- ""
+
+###
+mu=c(2,4)
+sigma<-matrix(c(1,0.9,0.9,0.9),ncol=2)
+
+x <- seq(from=-5, to=5, length.out=60)
+y <- seq(from=-5, to=5, length.out=60)
+
+#par(mai = c(1, 1, .5, .5))  # pulgadas de margenes
+par(mar = c(5, 0, 0, 0))  # lineas de margenes
+par(mfrow=c(1,2))
+superficie(x,y,mu,sigma,texto1)
+contornos2(x,y,mu,sigma,texto2)
+```
+
+## Propiedades de la distribución Normal Multivariada {#prop-nm}
+
+Sea $\underline{\mathbf{x}}$-un vector aleatorio $p$-variado.
+
+### **Propiedad-1:** {#prop1}
+
+Si $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$, entonces:
+$$
+\begin{equation}
+E[\underline{\mathbf{x}}]=\underline{\boldsymbol{\mu}} \  \ \ \text{y}\ \ \ Var[\underline{\mathbf{x}}]=\mathbf{\Sigma}
+\end{equation}
+(\#eq:prop-1)
+$$
+
+La distribución de $\underline{\mathbf{x}}$-queda completamente determinada por $\underline{\boldsymbol{\mu}}$ y $\mathbf{\Sigma}$.
+
+### **Propiedad-2:**  {#prop2}
+
+Si $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$, entonces 
+$$
+\begin{equation}
+\underline{a}^t\underline{\mathbf{x}} =a_1X_1+a_2X_2+\ldots+a_pX_p \sim N_1(\underline{a}^t\underline{\boldsymbol{\mu}}\ ,\ \underline{a}^t \mathbf{\Sigma} \underline{a})
+\end{equation}
+(\#eq:prop-2)
+$$
+
+Análogamente, si $\forall \ \underline{a}\in \mathbb{R}^p$ $\underline{a}^t\underline{\mathbf{x}} \sim N_1(\underline{a}^t\underline{\boldsymbol{\mu}}\ ,\ \underline{a}^t \mathbf{\Sigma} \underline{a})$ entonces $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$, es  decir:
+
+$$
+\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma}) \Longleftrightarrow \underline{a}^t \underline{\mathbf{x}} \sim N_1(\underline{a}^t\underline{\boldsymbol{\mu}}\ ,\ \underline{a}^t \mathbf{\Sigma} \underline{a})
+$$
+Luego, si $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$  entonces cada $X_i \sim N_1(\mu_i \ , \  \sigma_{ii})$, lo cual se logra con $\underline{a}=(0,0,\cdots, 1,\cdots, 0,0)^t$ con 1-en la posición $i$-ésima del vector $\underline{a}$ y $\underline{\boldsymbol{\mu}}$ y $\mathbf{\Sigma}$ dados por:
+$$
+\mathbf{\underline{\boldsymbol{\mu}}}=\begin{bmatrix}
+\mu_1\\ \mu_2\\ \vdots \\  \mu_p
+\end{bmatrix} \ \ \text{y} \ \ \ \mathbf{\Sigma}=
+\begin{bmatrix}
+\sigma_{11} & \sigma_{12}& \cdots &  \sigma_{1p}\\
+\sigma_{21} & \sigma_{22}& \cdots &  \sigma_{2p}\\
+\vdots & \vdots & \ddots & \vdots\\
+\sigma_{p1}& \sigma_{p2}& \cdots &  \sigma_{pp}
+\end{bmatrix}
+$$
+**FGM-NU**
+
+Si una v.a $X\sim N_1(\mu \, \ \sigma^2)$, entonces la FGM de $X$ es:
+$$
+M_X(t):=E\left[e^{tX}\right]=e^{\mu t+\frac{1}{2}\sigma^2 t^2}, \ t\in \mathbb{R}
+$$
+
+**FGM-NM**
+
+Si un vector aleatorio $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$, entonces la FGM de $\underline{\mathbf{x}}$ es:
+
+$$
+M_{\underline{\mathbf{x}}}(\underline{t}):=E\left[e^{\underline{t}^t\underline{\mathbf{x}}}\right]=e^{\underline{t}^t \underline{\boldsymbol{\mu}} +\frac{1}{2}\underline{t}^t  \mathbf{\Sigma}\underline{t}}, \ \ \underline{t} \in \mathbb{R}^p
+$$
+
+**Ejemplo-1**
+
+Suponga que $\underline{\mathbf{x}}\sim N_3 (\underline{\boldsymbol{\mu}} \ , \ \mathbf{\Sigma})$ y considere la combinación linea de las componentes de $\underline{\mathbf{x}}$ dada por: 
+
+$$
+Y=2X_1-X_2+3X_3=\begin{bmatrix}
+2 & -1 & 3
+\end{bmatrix}\begin{bmatrix}
+X_1 \\ X_2 \\ X_3
+\end{bmatrix}=\underline{a}^t\underline{\mathbf{x}}
+$$
+con $\underline{a}=\begin{bmatrix}2 & -1 & 3\end{bmatrix}^t$, entonces:
+$$
+E[Y]=E[\underline{a}^t\underline{\mathbf{x}}]=
+\underline{a}^t \underline{\boldsymbol{\mu}}=\begin{bmatrix}
+2 & -1 & 3
+\end{bmatrix}\begin{bmatrix}
+\mu_1 \\ \mu_2 \\ \mu_3
+\end{bmatrix}=2\mu_1-\mu_2+3\mu_3\ , \ \ \text{y}
+$$
+
+$$
+\begin{align*}
+Var[Y]&=Var[\underline{a}^t\underline{\mathbf{x}}]\\
+&=\underline{a}^t \mathbf{\Sigma} \underline{a}\\
+&= \begin{bmatrix}
+2 & -1 & 3
+\end{bmatrix}\begin{bmatrix}
+\sigma_{11} & \sigma_{12} & \sigma_{13}\\
+\sigma_{12} & \sigma_{22} & \sigma_{23}\\
+\sigma_{13} &\sigma_{23} & \sigma_{33}
+\end{bmatrix} \begin{bmatrix}
+2 \\ -1 \\ 3
+\end{bmatrix}\\
+&=\begin{bmatrix}
+2\sigma_{11}-\sigma_{12}+3\sigma_{13} & 
+2\sigma_{12}-\sigma_{22}+3\sigma_{23} & 
+2\sigma_{13}-\sigma_{23}+3\sigma_{33}
+\end{bmatrix} \begin{bmatrix}
+2 \\ -1 \\ 3
+\end{bmatrix}\\
+&=4\sigma_{11}-2\sigma_{12}+6\sigma_{13}- 
+2\sigma_{12}+\sigma_{22}-3\sigma_{23} +
+6\sigma_{13}-3\sigma_{23}+9\sigma_{33}\\
+&\\
+Var[Y]&=4\sigma_{11}
++\sigma_{22}+9\sigma_{33}-4\sigma_{12}+12\sigma_{13}-6\sigma_{23}
+\end{align*}
+$$
+Es decir que:
+$$
+Y=\underline{a}^t\underline{\mathbf{x}} =2X_1-X_2+3X_3 \sim N_1(\underline{a}^t\underline{\boldsymbol{\mu}}\ ,\ \underline{a}^t \mathbf{\Sigma} \underline{a})
+$$
+con: $\underline{a}^t \underline{\boldsymbol{\mu}}=2\mu_1-\mu_2+3\mu_3$\ \   y $\underline{a}^t \mathbf{\Sigma}\underline{a}=4\sigma_{11}+\sigma_{22}+9\sigma_{33}-4\sigma_{12}+12\sigma_{13}-6\sigma_{23}$.
+
+### **Propiedad-3:**  {#prop3}
+
+Si $\underline{\mathbf{x}}\sim N_p (\underline{\boldsymbol{\mu}} \ , \ \mathbf{\Sigma})$, entonces
+$$
+\begin{equation} 
+\underline{\mathbf{y}}=A \underline{\mathbf{x}} + \underline{b} \sim N_q(A \underline{\boldsymbol{\mu}}+\underline{b}\ , \ A\mathbf{\Sigma} A^t )
+\end{equation} 
+(\#eq:prop-3)
+$$
+
+Si $\underline{b}=\underline{0}$ se tiene que: 
+$\underline{\mathbf{y}}=A \underline{\mathbf{x}} \sim N_q(A \underline{\boldsymbol{\mu}}\ , \ A\mathbf{\Sigma} A^t )$, con $A_{q\times p}$.
+
+**Ejemplo:**
+Suponga que $\underline{\mathbf{x}}^{T}=(X_1,X_2,X_3) \sim N_3(\underline{\boldsymbol{\mu}} \ , \ \mathbf{\Sigma} )$, donde:
+$$
+\underline{\boldsymbol{\mu}}=\begin{bmatrix}
+2 \\ 1\\ 2
+\end{bmatrix} \ ,\ \ \text{y} \ \ \ \Sigma=\begin{bmatrix}
+2 & 1 &1 \\
+1 & 3 & 0 \\
+1 & 0 & 1
+\end{bmatrix}
+$$
+Hallar la distribución conjunta de probabilidad de: $Z_1=X_1+X_2+X_3$ \ y \ \ $Z_2=X_1-X_2$.
+
+$$
+\begin{align*}
+\text{Sea}: \ \ \underline{\mathbf{z}}=\begin{bmatrix}
+Z_1 \\ Z_2
+\end{bmatrix}&=\begin{bmatrix}
+X_1+X_2+X_3 \\ X_1-X_2
+\end{bmatrix}\\
+&=\begin{bmatrix}
+1 & 1 &1 \\ 1 & -1 & 0
+\end{bmatrix}\begin{bmatrix}
+X_1 \\ X_2 \\ X_3
+\end{bmatrix}\\
+\underline{\mathbf{z}}&=A\underline{\mathbf{x}}
+\end{align*}
+$$
+
+
+luego, 
+$$
+\underline{\mathbf{z}}=\begin{bmatrix}
+Z_1 \\ Z_2
+\end{bmatrix} \sim N_2 (A \underline{\boldsymbol{\mu}} \ , \ A\mathbf{\Sigma} A^t),
+$$
+
+donde: 
+$$
+A\underline{\boldsymbol{\mu}}= \begin{bmatrix}
+1 & 1 &1 \\ 1 & -1 & 0
+\end{bmatrix}\begin{bmatrix}
+2 \\ 1\\ 2
+\end{bmatrix}=\begin{bmatrix}
+5 \\ 1
+\end{bmatrix}_{2 \times 1}
+$$
+
+y
+$$
+A\mathbf{\Sigma} A^t= \begin{bmatrix}
+1 & 1 &1 \\ 1 & -1 & 0
+\end{bmatrix}\begin{bmatrix}
+2 & 1 &1 \\
+1 & 3 & 0 \\
+1 & 0 & 1
+\end{bmatrix}\begin{bmatrix}
+1 & 1\\
+1 & -1 \\
+1 & 0
+\end{bmatrix}=\begin{bmatrix}
+4 & 4 &2 \\
+1 & -2 & 1
+\end{bmatrix}\begin{bmatrix}
+1 & 1\\
+1 & -1 \\
+1 & 0
+\end{bmatrix}=\begin{bmatrix}
+10 & 0\\
+0 & 3 
+\end{bmatrix}
+$$
+de lo anterior, $Z_1$ y $Z_2$ son independientes,  pues $Cov(Z_1,Z_2)=0$ y $Z_1$ y $Z_2$ son distribuidas normales uni-variadas.
+
+
+### **Propiedad-4:** {#prop4}
+
+Sea $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$ y sean los vectores y matrices particionadas dadas por:
+
+$$
+\underline{\mathbf{x}}=\begin{bmatrix}
+X_1 \\ X_2 \\  \vdots  \\ X_p
+\end{bmatrix}=\begin{bmatrix}
+\underline{\mathbf{x}}^{(1)} \\ \cdots \\ \underline{\mathbf{x}}^{(2)}
+\end{bmatrix} \ \ , \ \ 
+\underline{\boldsymbol{\mu}}=\begin{bmatrix}
+\underline{\boldsymbol{\mu}}^{(1)} \\ \cdots \\ \underline{\boldsymbol{\mu}}^{(2)}
+\end{bmatrix}\ \ \text{y} \ \ 
+\mathbf{\Sigma}_{p\times p}= 
+ \begin{bmatrix}
+\mathbf{\Sigma}_{11} & | & \mathbf{\Sigma}_{12} \\
+-- & -- & -- \\
+\mathbf{\Sigma}_{21} & | & \mathbf{\Sigma}_{22}
+\end{bmatrix}
+$$
+
+entonces:
+$$
+\begin{align}
+\underline{\mathbf{x}}^{(1)} & \sim N_q\left(\underline{\boldsymbol{\mu}}^{(1)} \ , \ \mathbf{\Sigma}_{11}\right) \notag  \\ \\
+\underline{\mathbf{x}}^{(2)} & \sim N_{p-q}\left(\underline{\boldsymbol{\mu}}^{(2)} \ , \ \mathbf{\Sigma}_{22}\right)
+\end{align}
+(\#eq:prop-4)
+$$
+
+La anterior propiedad también se puede enunciar como sigue: Todos los subconjuntos de variables de $\underline{\mathbf{x}}$ tienen distribución normal, sea univariada o multivariada.
+
+**Ejemplo:**
+Sea\ \ $\underline{\mathbf{x}}\sim N_5 (\underline{\boldsymbol{\mu}} \ , \ \mathbf{\Sigma})$, hallar la distribución de: $\begin{bmatrix}X_2 \\ X_4 \end{bmatrix}$
+$$
+\text{Sean}, \ \ \ \underline{\mathbf{x}}^{(1)}=\begin{bmatrix}
+X_2 \\ X_4
+\end{bmatrix}\ , \ \ \underline{\boldsymbol{\mu}}^{(1)}=\begin{bmatrix}
+\mu_2 \\ \mu_4 
+\end{bmatrix}\ \ \ \text{y} \ \ \ \mathbf{\Sigma}_{11}=\begin{bmatrix}
+\sigma_{22} & \sigma_{24}\\
+\sigma_{24} & \sigma_{44}
+\end{bmatrix}
+$$
+
+Asumiendo que $\underline{\mathbf{x}}$, $\underline{\boldsymbol{\mu}}$ y $\mathbf{\Sigma}$ son particionados como sigue:
+$$
+\hspace{-2.0cm}\underline{\mathbf{x}}=\begin{bmatrix}
+X_2 \\ X_4 \\ \cdots \\ X_1 \\ X_3 \\ X_5
+\end{bmatrix}\ , \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix}
+\mu_2 \\ \mu_4 \\ \cdots \\ \mu_1 \\ \mu_3 \\ \mu_5
+\end{bmatrix}\ \ \ \text{y} \ \ \ \mathbf{\Sigma}=\begin{bmatrix}
+\sigma_{22} & \sigma_{24} & \vdots & \sigma_{12} & \sigma_{23} & \sigma_{25}\\
+\sigma_{24} & \sigma_{44}& \vdots & \sigma_{14} & \sigma_{34} & \sigma_{45}\\
+\cdots & \cdots \cdots & \cdots & \cdots & \cdots & \cdots\\
+\sigma_{12} &\sigma_{14} & \vdots & \sigma_{11} &\sigma_{13}
+&\sigma_{15}  \\
+\sigma_{23} &\sigma_{34} & \vdots & \sigma_{13} &\sigma_{33}
+&\sigma_{35}  \\
+\sigma_{25} &\sigma_{45} & \vdots & \sigma_{15} &\sigma_{35}
+&\sigma_{55}  
+\end{bmatrix}
+$$
+
+$$
+\text{es decir}: \ \ \underline{\mathbf{x}}=\begin{bmatrix}
+\underline{\mathbf{x}}^{(1)} \\ \cdots \\ \underline{\mathbf{x}}^{(2)}
+\end{bmatrix} \ \ , \ \ 
+\underline{\boldsymbol{\mu}}=\begin{bmatrix}
+\underline{\boldsymbol{\mu}}^{(1)} \\ \cdots \\ \underline{\boldsymbol{\mu}}^{(2)}
+\end{bmatrix}\ \ \text{y} \ \ 
+\mathbf{\Sigma}= 
+ \begin{bmatrix}
+\mathbf{\Sigma}_{11} & | & \mathbf{\Sigma}_{12} \\
+-- & -- & -- \\
+\mathbf{\Sigma}_{21} & | & \mathbf{\Sigma}_{22}
+\end{bmatrix}
+$$
+
+$$
+\text{luego}: \ \ \underline{\mathbf{x}}^{(1)} 
+\sim  N_2\left(\underline{\boldsymbol{\mu}}^{(1)}\ , \ \mathbf{\Sigma}_{11}\right)\sim N_2 \left(\begin{bmatrix}
+\mu_2 \\ \mu_4 
+\end{bmatrix}\ , \begin{bmatrix}
+\sigma_{22} & \sigma_{24}\\
+\sigma_{24} & \sigma_{44}
+\end{bmatrix} \right)
+$$
+
+###  **Propiedad-5:** {#prop5}
+
+a). 
+$$ 
+\text{Si}, \ \ \ \underline{\mathbf{x}}=\begin{bmatrix}
+\underline{\mathbf{x}}^{(1)} \\ \cdots \\ \underline{\mathbf{x}}^{(2)}
+\end{bmatrix} \sim N_{p} \begin{bmatrix}
+\begin{pmatrix}
+\underline{\boldsymbol{\mu}}^{(1)} \\ \cdots \\ \underline{\boldsymbol{\mu}}^{(2)}
+\end{pmatrix} \ , \ \begin{pmatrix}
+\mathbf{\Sigma}_{11} & | & \mathbf{\Sigma}_{12} \\
+-- & -- & -- \\
+\mathbf{\Sigma}_{21} & | & \mathbf{\Sigma}_{22}
+\end{pmatrix}
+\end{bmatrix}
+$$
+entonces:
+$$
+\begin{equation}
+\underline{\mathbf{x}}^{(1)} \perp \underline{\mathbf{x}}^{(2)}\ , \ \ \text{si y solo si} \ \ \mathbf{\Sigma}_{12}=\mathbf{\Sigma}_{21}^t=\mathbf{O}_{q\times (p-q)}
+\end{equation}
+(\#eq:prop-5a)
+$$
+
+es decir, $\underline{\mathbf{x}}^{(1)}\ \ \text{y} \ \ \  \underline{\mathbf{x}}^{(2)}$ son estadísticamente independientes si y solo si:
+$\mathbf{\Sigma}_{12}=\mathbf{\Sigma}_{21}^t=\mathbf{O}$. 
+
+**Ejemplo:**
+Suponga que $\underline{\mathbf{x}}\sim N_3 (\underline{\boldsymbol{\mu}} \ , \ \mathbf{\Sigma)}$, con 
+$$
+\mathbf{\Sigma}= \begin{bmatrix}
+ 4 & 1 & 0\\
+ 1 & 3 & 0 \\
+ 0 & 0 & 2
+\end{bmatrix}
+$$
+¿Son las variables $X_1$ y $X_2$ independientes? Rta. \ \  NO, porque $\sigma_{12}=1\neq 0$.
+
+¿Son los siguientes vectores aleatorios independientes?:
+
+$\begin{bmatrix}X_1 \\ X_3 \end{bmatrix}\  \ \text{y} \ \ \begin{bmatrix} X_3 \end{bmatrix}$.
+
+Sean 
+$$
+\underline{\mathbf{x}}=\begin{bmatrix}
+X_1 \\ X_2 \\ \cdots \\ X_3
+\end{bmatrix}\ , \ \ \underline{\boldsymbol{\mu}}=\begin{bmatrix}
+\mu_1 \\ \mu_2 \\ \cdots \\ \mu_3
+\end{bmatrix}\ \ \ \text{y} \ \ \ \mathbf{\Sigma}=\begin{bmatrix}
+\sigma_{11} & \sigma_{12} & \vdots & \sigma_{13}\\
+\sigma_{21} & \sigma_{22}& \vdots & \sigma_{23}\\
+\cdots & \cdots & \cdots & \cdots\\
+\sigma_{31} &\sigma_{32} & \vdots & \sigma_{33}
+\end{bmatrix}=\begin{bmatrix}
+4 & 1 & \vdots & 0\\
+1 & 3& \vdots & 0\\
+\cdots & \cdots & \cdots & \cdots\\
+0 &0 & \vdots & 2
+\end{bmatrix}
+$$
+$$
+\text{luego para}:\  \  \ \underline{\mathbf{x}}^{(1)}=\begin{bmatrix}
+X_1 \\ X_3
+\end{bmatrix}\  \ \text{y} \ \ \underline{\mathbf{x}}^{(2)}=\begin{bmatrix} X_3
+\end{bmatrix}
+$$
+
+$$
+\text{se tiene:} \ \ \ \mathbf{\Sigma}_{12}=Cov\left(\underline{\mathbf{x}}^{(1)}\ , \ \underline{\mathbf{x}}^{(2)}\right)=\begin{bmatrix}
+\sigma_{13} \\ \sigma_{23}
+\end{bmatrix}=\begin{bmatrix}
+0\\0
+\end{bmatrix}=\mathbf{\underline{0}}
+$$
+por lo tanto, si son independientes. 
+
+
+b). Si $\underline{\mathbf{x}}^{(1)} \perp \underline{\mathbf{x}}^{(2)}$ \ tales que: \   
+
+$$
+\underline{\mathbf{x}}^{(1)} \sim  N_q\left(\underline{\boldsymbol{\mu}}^{(1)}\ , \ \mathbf{\Sigma}_{11}\right) \ \ \ \text{y} \ \ \ \underline{\mathbf{x}}^{(2)} \sim  N_q\left(\underline{\boldsymbol{\mu}}^{(2)}\ , \ \mathbf{\Sigma}_{22}\right)
+$$
+
+entonces,
+$$
+\begin{equation}
+\underline{\mathbf{x}}=\begin{bmatrix}
+\underline{\mathbf{x}}^{(1)} \\ \cdots \\ \underline{\mathbf{x}}^{(2)}
+\end{bmatrix} \sim N_{p} \begin{bmatrix}
+\begin{pmatrix}
+\underline{\boldsymbol{\mu}}^{(1)} \\ \cdots \\ \underline{\boldsymbol{\mu}}^{(2)}
+\end{pmatrix} \ , \ \begin{pmatrix}
+\mathbf{\Sigma}_{11} & | & O \\
+-- & -- & -- \\
+O & | & \mathbf{\Sigma}_{22}
+\end{pmatrix}
+\end{bmatrix}
+\end{equation}
+(\#eq:prop-5b)
+$$
+
+c). Si $\underline{\mathbf{x}}^{(1)} \perp \underline{\mathbf{x}}^{(2)}$ \ , \   
+
+$$
+\underline{\mathbf{x}}^{(1)} \sim  N_q\left(\underline{\boldsymbol{\mu}}^{(1)}\ , \ \mathbf{\Sigma}_{11}\right) \ \ \ \text{y} \ \ \ \underline{\mathbf{x}}^{(2)} \sim  N_q\left(\underline{\boldsymbol{\mu}}^{(2)}\ , \ \mathbf{\Sigma}_{22}\right)
+$$
+
+Además:
+$$
+\begin{equation}
+\underline{\mathbf{x}}^{(1)}+\underline{\mathbf{x}}^{(2)} \sim N_{k} \left(\underline{\boldsymbol{\mu}}^{(1)}+\underline{\boldsymbol{\mu}}^{(2)} \ , \ \mathbf{\Sigma}_{11}+\mathbf{\Sigma}_{22} \right), \ \ \text{si} \ \ q=p-q=k
+\end{equation}
+(\#eq:prop-5c)
+$$
+
+### **Propiedad-6:** {#prop6}
+
+$$
+\text{Si} \ \ \ \ \ \underline{\mathbf{x}}=\begin{bmatrix} \underline{\mathbf{x}}^{(1)} \\ \cdots \\ \underline{\mathbf{x}}^{(2)} \end{bmatrix} \sim N_{p} \begin{bmatrix} \begin{pmatrix} \underline{\boldsymbol{\mu}}^{(1)} \\ \cdots \\ \underline{\boldsymbol{\mu}}^{(2)} \end{pmatrix} \ , \ \begin{pmatrix} \mathbf{\Sigma}_{11} & | & \mathbf{\Sigma}_{12} \\ -- & -- & -- \\ \mathbf{\Sigma}_{21} & | & \mathbf{\Sigma}_{22} \end{pmatrix} \end{bmatrix},\  \text{con} \  |\mathbf{\Sigma}_{22}|>0
+$$
+
+entonces, la distribución condicional de $\underline{\mathbf{x}}^{(1)}$ 
+dado $\underline{\mathbf{x}}^{(2)}$ esta dada por:
+
+$$
+\begin{equation}
+\underline{\mathbf{x}}^{(1)}\biggr|\underline{\mathbf{x}}^{(2)}=\underline{x}^{(2)} \sim N_q \left[ 
+\underline{\boldsymbol{\mu}}^{(1)}+\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\left(\underline{x}^{(2)}-
+\underline{\boldsymbol{\mu}}^{(2)}\right)  \ , \   \mathbf{\Sigma}_{11}-\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\mathbf{\Sigma}_{21}  \right]
+\end{equation}
+(\#eq:prop-6a)
+$$
+
+es decir:
+$$
+E\left[\underline{\mathbf{x}}^{(1)}\biggr|\underline{\mathbf{x}}^{(2)}=\underline{x}^{(2)}\right]=\underline{\boldsymbol{\mu}}^{(1)}+
+\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\left(\underline{x}^{(2)}-
+\underline{\boldsymbol{\mu}}^{(2)}\right)
+$$
+
+y
+$$
+Var\left[\underline{\mathbf{x}}^{(1)}\biggr|\underline{\mathbf{x}}^{(2)}=\underline{x}^{(2)}\right]=
+\mathbf{\Sigma}_{11}-\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\mathbf{\Sigma}_{21}
+$$
+
+De manera similar, si $|\mathbf{\Sigma}_{11}|>0$, entonces:
+$$
+\begin{equation}
+\underline{\mathbf{x}}^{(2)}\biggr|\underline{\mathbf{x}}^{(1)}=\underline{x}^{(1)} \sim N_{p-q} \left[ \underline{\boldsymbol{\mu}}^{(2)}+\mathbf{\Sigma}_{21}\mathbf{\Sigma}_{11}^{-1}\left(\underline{x}^{(1)}-
+\underline{\boldsymbol{\mu}}^{(1)}\right) \ , \   \mathbf{\Sigma}_{22}-\mathbf{\Sigma}_{21}\mathbf{\Sigma}_{11}^{-1}\mathbf{\Sigma}_{12}  \right]
+\end{equation}
+(\#eq:prop-6b)
+$$
+
+**Ejemplo:**
+
+Distribución condicional de una Normal-Bivariada.
+Sea 
+$$
+\underline{\mathbf{x}}=\begin{bmatrix} X_1 \\ X_2 \end{bmatrix} \sim N_{2} \begin{bmatrix} \begin{bmatrix} \mu_{1} \\ \mu_{2} \end{bmatrix} \ , \ \begin{pmatrix} \sigma_{11} & | & \sigma_{12} \\ -- & -- & -- \\ \sigma_{21} & | & \sigma_{22} \end{pmatrix} \end{bmatrix},\  \text{con} \  \sigma_{22}>0
+$$ 
+
+luego, la distribución condicional de $X_1 | X_2$ esta dada por:
+$$
+X_1 | X_2=x_2 \sim N_1 \left(\mu_1+\frac{\sigma_{12}}{\sigma_{22}}(x_2-\mu_2)\ , \ \sigma_{11}-\frac{\sigma_{12}}{\sigma_{22}}\sigma_{21} \right)
+$$
+
+$$
+\begin{align*}
+X_1 | X_2=x_2 & \sim N_1 \left(\mu_1+\frac{\sqrt{\sigma_{11}}}{\sqrt{\sigma_{22}}}\rho_{12}(x_2-\mu_2)\ , \ \sigma_{11}\left[ 1 - \rho_{12}^2\right] \right)\\
+& \sim N_1 \left(\underset{a_0}{\underbrace{ \mu_1-\frac{\sqrt{\sigma_{11}}}{\sqrt{\sigma_{22}}}\rho_{12}\mu_2}}+ \underset{b}{\underbrace{\frac{\sqrt{\sigma_{11}}}{\sqrt{\sigma_{22}}}\rho_{12}}}x_2\ , \ \sigma_{11}\left[ 1 - \rho_{12}^2\right] \right)\\
+&\\
+X_1 | X_2=x_2&\sim N_1 \left(a_0+b x_2\ , \ \sigma_{11}\left[ 1 - \rho_{12}^2\right] \right)
+\end{align*}
+$$
+
+de donde se observa que la media de la distribución condicional de $X_1 | X_2=x_2$, corresponde a la ecuación de una línea recta con intecepto $a_0$ y pendiente $b$, ie. la ecuación del modelo de regresión lineal de $X_1$  v.s $X_2$.
+
+**Ejemplo:**
+
+Suponga que $\underline{\mathbf{x}}^{T}=(X_1,X_2,X_3) \sim N_3(\underline{\boldsymbol{\mu}} \ , \ \mathbf{\Sigma} )$, donde:
+$$
+\underline{\boldsymbol{\mu}}=\begin{bmatrix}
+2 \\ 1\\ 2
+\end{bmatrix} \ ,\ \ \text{y} \ \ \ \mathbf{\Sigma}=\begin{bmatrix}
+2 & 1 &1 \\
+1 & 3 & 0 \\
+1 & 0 & 1
+\end{bmatrix}
+$$
+
+Hallar la distribución condicional de: $\underline{\mathbf{x}}^{(1)} | \underline{\mathbf{x}}^{(2)}$, donde:
+$$
+\underline{\mathbf{x}}^{(1)}=\begin{bmatrix}
+X_1 \\ X_2
+\end{bmatrix} \ \ \text{y} \ \ \underline{\mathbf{x}}^{(2)}=\begin{bmatrix} X_3
+\end{bmatrix}
+$$
+
+La distribución condicional de: $\underline{\mathbf{x}}^{(1)}\  \biggl|\ \underline{\mathbf{x}}^{(2)}$ es normal bi-variada con vector de medias:
+$$
+\underline{\boldsymbol{\mu}}_{\ 1.2}=E\biggl[\underline{\mathbf{x}}^{(1)}\  \biggl|\ \underline{\mathbf{x}}^{(2)}\biggr]=
+\underline{\boldsymbol{\mu}}^{(1)}+\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\left(\underline{\mathbf{x}}^{(2)}-
+\underline{\boldsymbol{\mu}}^{(2)}\right) 
+$$
+
+y matriz de var-cov dada por:
+$$
+\mathbf{\Sigma}_{1.2}=Var\biggl(\underline{\mathbf{x}}^{(1)}\  \biggl|\ \underline{\mathbf{x}}^{(2)}\biggr)=
+\mathbf{\Sigma}_{11}-\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\mathbf{\Sigma}_{21}
+$$
+
+Haciendo,
+$$
+\underline{\boldsymbol{\mu}}=\begin{bmatrix}
+\underline{\boldsymbol{\mu}}^{(1)} \\ \cdots \\ \underline{\boldsymbol{\mu}}^{(2)}
+\end{bmatrix}=\begin{bmatrix}
+\mu_{1} \\ \mu_2 \\ \cdots \\ \mu_{3}
+\end{bmatrix}=\begin{bmatrix}
+\begin{pmatrix}
+2 \\ 1
+\end{pmatrix}
+\\ \cdots \\ \begin{pmatrix}
+2
+\end{pmatrix}
+\end{bmatrix}
+$$
+
+y
+$$
+\mathbf{\Sigma}=\begin{bmatrix}
+2 & 1 &1 \\
+1 & 3 & 0 \\
+1 & 0 & 1
+\end{bmatrix}=\begin{pmatrix}
+\mathbf{\Sigma}_{11} & | & \mathbf{\Sigma}_{12} \\
+-- & -- & -- \\
+\mathbf{\Sigma}_{21} & | &\mathbf{\Sigma}_{22}
+\end{pmatrix}=\begin{bmatrix}
+\begin{pmatrix}
+2 & 1 \\ 1 & 3
+\end{pmatrix} & \vdots & \begin{pmatrix}
+1 \\ 0
+\end{pmatrix} \\
+\cdots & & \cdots \\
+\begin{pmatrix}
+1 & 0
+\end{pmatrix} & \vdots & \begin{bmatrix}
+1
+\end{bmatrix}
+\end{bmatrix}
+$$
+
+luego, 
+$$
+\underline{\boldsymbol{\mu}}_{1.2}=E\biggl[\underline{\mathbf{x}}^{(1)}\  \biggl|\ \underline{\mathbf{x}}^{(2)}=\underline{x}^{(2)} \biggr]=\underline{\boldsymbol{\mu}}^{(1)}+\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\left(\underline{x}^{(2)}-
+\underline{\boldsymbol{\mu}}^{(2)}\right)=\begin{pmatrix}
+2 \\1
+\end{pmatrix}+\begin{pmatrix}
+1 \\ 0
+\end{pmatrix} \frac{1}{1}\begin{pmatrix}
+x_3-2
+\end{pmatrix}=\begin{pmatrix}
+x_3 \\ 1
+\end{pmatrix}
+$$
+
+y 
+$$
+\mathbf{\Sigma}_{1.2}= Var\biggl[\underline{\mathbf{x}}^{(1)}\  \biggl|\ \underline{\mathbf{x}}^{(2)}=\underline{x}^{(2)} \biggr]=
+\mathbf{\Sigma}_{11}-\mathbf{\Sigma}_{12}\mathbf{\Sigma}_{22}^{-1}\mathbf{\Sigma}_{21}=\begin{pmatrix}
+2 & 1 \\ 1 & 3
+\end{pmatrix}-\begin{pmatrix}
+1 \\ 0
+\end{pmatrix}\frac{1}{1}\begin{pmatrix}
+1 & 0
+\end{pmatrix}=\begin{pmatrix}
+1 & 1 \\ 1 & 3
+\end{pmatrix}
+$$
+
+### **Propiedad-7:** {#prop7}
+
+Sea $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$. Si $|\mathbf{\Sigma}|>0$, entonces:
+
+$$
+\begin{equation}
+\underline{\mathbf{z}}=\mathbf{\Sigma}^{-1/2}(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}}) \sim N_p (\underline{0}\ , \ \mathbf{I}_p)
+\end{equation}
+(\#eq:prop-7)
+$$
+
+ie, $\underline{\mathbf{z}}$-tiene una distribución normal-multivariada estándar.
+
+La Demostración de la propiedad \@ref(prop7) se puede estudiarla del libro de [@johnson2007applied].
+
+### **Propiedad-8:** {#prop8}
+
+Sea $\underline{\mathbf{x}} \sim N_p(\underline{\boldsymbol{\mu}},\mathbf{\Sigma})$, con $|\mathbf{\Sigma}|>0$.
+
+a.) 
+$$
+\begin{equation}
+(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})\sim \chi_{p}^2
+\end{equation}
+(\#eq:prop-8a)
+$$
+
+b.) La distribución $N_p(\underline{\boldsymbol{\mu}}\ , \ \mathbf{\Sigma})$-asigna probabilidad de $(1-\alpha)100\%$ al elipsoide determinado por: 
+$$
+\begin{equation}
+\left\{\underline{\mathbf{x}}\ : \  (\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}}) \leq \chi_{\alpha;p}^2 \right\}
+(\#eq:prop-8b)
+\end{equation}
+$$
+
+donde, $\chi_{\alpha;p}^2$-es el percentil superior $\alpha$ de la distribución $\chi_p^2$.
+
+### **Propiedad-9:** {#prop9}
+
+Sean $\underline{\mathbf{x}}_1,\underline{\mathbf{x}}_2,\ldots,\underline{\mathbf{x}}_n$, vectores aleatorios $p$-variados mutuamente-independientes tales que: 
+$$
+\underline{\mathbf{x}}_i \sim N_p (\underline{\boldsymbol{\mu}}_i \ , \ \mathbf{\Sigma})\ , \ \ \text{para} \ \ i=1,2,\ldots,n,
+$$ 
+entonces:
+$$
+\begin{align}
+\underline{\mathbf{v}}_{\ 1}&=\sum_{i=1}^n c_i\underline{\mathbf{x}}_i 
+= c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+\cdots+c_n \underline{\mathbf{x}}_n \notag \\ \\ 
+& \sim N_{p} \left(\sum_{i=1}^n c_i \underline{\boldsymbol{\mu}}_i \ , \ \left( \sum_{}^n c_i^2 \right)\mathbf{\Sigma} \right)\\ \\ 
+& \sim N_p \left( c_1\underline{\boldsymbol{\mu}}_1+c_2\underline{\boldsymbol{\mu}}_2+\cdots+c_n\underline{\boldsymbol{\mu}}_n \ , \ [c_1^2+c_2^2+\cdots+c_n^2]\mathbf{\Sigma} \right) \notag 
+\end{align}
+(\#eq:prop-9a)
+$$
+
+
+además, si
+$$
+\underline{\mathbf{v}}_{\ 2}=\sum_{i=1}^n b_i \underline{\mathbf{x}}_i 
+= b_1\underline{\mathbf{x}}_1+b_2\underline{\mathbf{x}}_2+\cdots+b_n \underline{\mathbf{x}}_n
+$$
+
+entonces:
+$$
+\begin{equation}
+\underline{\mathbf{v}}=\begin{bmatrix}
+\underline{\mathbf{v}}_{\ 1} \\ \cdots \\ \underline{\mathbf{v}}_{\ 2}
+\end{bmatrix} \sim N_{2p} \left[ \begin{pmatrix}
+\sum_{i=1}^n c_i \underline{\boldsymbol{\mu}}_i \\ \cdots\cdots \\ \sum_{i=1}^n b_i \underline{\boldsymbol{\mu}}_i
+\end{pmatrix} \ , \ \mathbf{\Sigma}_{\underline{\mathbf{v}}_{\ 1},\underline{\mathbf{v}}_{\ 2}} \right]\ , \ \ \text{donde}
+\end{equation}
+(\#eq:prop-9b)
+$$
+
+$$
+\begin{align*}
+\Sigma_{\underline{\mathbf{v}}_{\ 1}\ ,\ \underline{\mathbf{v}}_{\ 2}}=Cov(\underline{\mathbf{v}}_{\ 1}\ , \ \underline{\mathbf{v}}_{\ 2})&=\begin{bmatrix}
+\left( \sum_{i=1}^n c_i^2\right) \mathbf{\Sigma} & \vdots &  \left( \sum_{i=1}^n b_ic_i\right) \mathbf{\Sigma} \\
+\cdots\cdots & & \cdots\cdots \\
+\left( \sum_{i=1}^n b_ic_i\right) \mathbf{\Sigma} & \vdots & \left( \sum_{i=1}^n b_i^2\right) \mathbf{\Sigma}
+\end{bmatrix}\\ \\ 
+&=\begin{bmatrix}
+\left( \underline{c}^t\underline{c} \right) \mathbf{\Sigma} & \vdots &  \left( \underline{b}^t\underline{c} \right) \mathbf{\Sigma} \\
+\cdots\cdots & & \cdots\cdots \\
+\left( \underline{b}^t\underline{c} \right) \mathbf{\Sigma} & \vdots & \left( \underline{b}^t\underline{b}\right)\mathbf{\Sigma}
+\end{bmatrix}_{2p \times 2p}
+\end{align*}
+$$
+
+y además,\ \  $\underline{\mathbf{v}}_{\ 1} \perp \underline{\mathbf{v}}_{\ 2}$\ \  si \ \  $\underline{b}^t\underline{c}=\sum_{i=1}^n b_ic_i=0$. 
+
+**Ejemplo:**
+Suponga que $\underline{\mathbf{x}}_1,\underline{\mathbf{x}}_2,\underline{\mathbf{x}}_3,\underline{\mathbf{x}}_4$, son vectores aleatorios $3$-variados independientes e idénticamente  distribuidos, ie. $\underline{\mathbf{x}}_i=(X_1,X_2,X_3)^t$, con:
+$$
+\underline{\boldsymbol{\mu}}=E[\underline{\mathbf{x}}_i]=\begin{bmatrix}
+3 \\ -1 \\ 1
+\end{bmatrix}\ , \ \ \text{y} \ \ \ \mathbf{\Sigma}=Var[\underline{\mathbf{x}}_i]=\begin{bmatrix}
+3 & -1 & 1 \\ -1 & 1 & 0 \\ 1 &0 &2
+\end{bmatrix}
+$$ 
+
+1. Hallar la media y varianza de: 
+$$
+\underline{a}^t\underline{\mathbf{x}}_1=a_1X_1+a_2X_2+a_3X_3.
+$$
+
+2. Hallar la media y varianza de:
+$$
+c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+
+c_3\underline{\mathbf{x}}_3+
+c_4\underline{\mathbf{x}}_4=\frac{1}{2}\underline{\mathbf{x}}_1+
+\frac{1}{2}\underline{\mathbf{x}}_2+\frac{1}{2}\underline{\mathbf{x}}_3+\frac{1}{2}\underline{\mathbf{x}}_4
+$$
+
+3. Hallar la media y varianza de: 
+$$
+\begin{bmatrix}
+c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+
+c_3\underline{\mathbf{x}}_3+
+c_4\underline{\mathbf{x}}_4\\  \underline{\mathbf{x}}_1+\underline{\mathbf{x}}_2+
+\underline{\mathbf{x}}_3-3\underline{\mathbf{x}}_4
+\end{bmatrix}
+$$
+
+**Solución:**
+Se procede como sigue:
+
+1. Para
+
+$$
+\underline{\mathbf{x}}_1=\begin{bmatrix} X_{11} \\ X_{12} \\ X_{13} \end{bmatrix}_{3\times 1}
+$$
+
+La distribución de: 
+$$
+\underline{a}^t\underline{\mathbf{x}}_1=a_1X_{11}+a_2X_{12}+a_3X_{13}
+$$
+Una combinación lineal de las componentes de un vector aleatorio, ie. una c.l de variables, lo cual es solo una variable aleatoria, por lo tanto se tiene que:
+
+$$
+\begin{align*}
+E\biggl[\underline{a}^t\underline{\mathbf{x}}_1\biggr]&=E[a_1X_{11}+a_2X_{12}+a_3X_{13}]\\ \\ 
+&=a_1E[X_{11}]+a_2E[X_{12}]+a_3E[X_{13}]\\ \\ 
+&=a_1 \mu_1 +a_2 \mu_2 + a_3 \mu_3 \\ \\ 
+&=3a_1-a_2+a_3,
+\end{align*}
+$$
+
+y
+$$
+\begin{align*}
+Var\biggl[\underline{a}^t\underline{\mathbf{x}}_1\biggr]&=Var\biggl[a_1X_{11}+a_2X_{12}+a_3X_{13}\biggr]\\ \\ 
+&=a_1^2Var[X_{11}]+a_2^2Var[X_{12}]+a_3^2Var[X_{13}]\\ \\ 
+&+2a_1a_2Cov(X_{11},X_{12})+2a_1a_3Cov(X_{11},X_{13})+
+2a_2a_3Cov(X_{12},X_{13})\\ \\ 
+&=a_1^2\sigma_{11} + a_2^2\sigma_{22} + a_3^2\sigma_{33} 
++2a_1a_2\sigma_{12} + 2a_1a_3 \sigma_{13} +
+2a_2a_3\sigma_{23} \\ \\ 
+&=3a_1^2+a_2^2+2a_3^2-2a_1a_2+2a_1a_3\\ \\ 
+&=\underline{a}^t\mathbf{\Sigma} \underline{a}.
+\end{align*}
+$$
+
+2. La media y la varianza de:
+
+$$
+\underline{\mathbf{v}}_{\ 1}=c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+
+c_3\underline{\mathbf{x}}_3+
+c_4\underline{\mathbf{x}}_4=\frac{1}{2}\underline{\mathbf{x}}_1+
+\frac{1}{2}\underline{\mathbf{x}}_2+\frac{1}{2}\underline{\mathbf{x}}_3+\frac{1}{2}\underline{\mathbf{x}}_4
+$$
+
+En este caso se tiene un combinación lineal de vectores, lo cual a su vez es un vector aleatorio, por lo tanto:
+$$
+\begin{align*}
+\underline{\ \boldsymbol{\mu}}_{\ \underline{\mathbf{v}}_{\  1}}=E\biggl[c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+
+c_3\underline{\mathbf{x}}_3+
+c_4\underline{\mathbf{x}}_4\biggr]&=c_1E\bigl[\underline{\mathbf{x}}_1\bigr]+
+c_2E\bigl[\underline{\mathbf{x}}_2\bigr]+c_3E\bigl[\underline{\mathbf{x}}_3\bigr]+
+c_4E\bigl[\underline{\mathbf{x}}_4\bigr]\\ \\ 
+&=\sum_{i=1}^n c_i \underline{\boldsymbol{\mu}}_i 
+=c_1\underline{\boldsymbol{\mu}}+c_2\underline{\boldsymbol{\mu}}+c_3\underline{\boldsymbol{\mu}}+
+c_4\underline{\boldsymbol{\mu}}\\ \\ 
+&=(c_1+c_2+c_3+c_4)\underline{\boldsymbol{\mu}}\\ \\ 
+&=\left(\frac{1}{2}+\frac{1}{2}+\frac{1}{2}+\frac{1}{2}\right)\underline{\boldsymbol{\mu}}\\ \\ 
+&=2\underline{\boldsymbol{\mu}}=2\begin{bmatrix}
+3 \\ -1 \\ 1
+\end{bmatrix}=\begin{bmatrix}
+6 \\-2 \\2
+\end{bmatrix}
+\end{align*}
+$$
+
+$$
+\begin{align*}
+\Sigma_{\underline{\ \mathbf{v}}_{\ 1}}&=Var\biggl[c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+
+c_3\underline{\mathbf{x}}_3+
+ c_4\underline{\mathbf{x}}_4\biggr] \\ \\ 
+&=c_1^2Var\bigl[\underline{\mathbf{x}}_1\bigr]+
+c_2^2Var\bigl[\underline{\mathbf{x}}_2\bigr]+c_3^2Var\bigl[\underline{\mathbf{x}}_3\bigr]
++c_4^2Var\bigl[\underline{\mathbf{x}}_4\bigr]\\ \\ 
+&=c_1^2\mathbf{\Sigma}+c_2^2\mathbf{\Sigma}+c_3^2\mathbf{\Sigma}+
+c_4^2\mathbf{\Sigma}\\ \\ 
+ &=\left( \sum_{i=1}^n c_i^2 \right)\mathbf{\Sigma} 
+=(c_1^2+c_2^2+c_3^2+c_4^2)\mathbf{\Sigma}\\ \\ 
+&=\left(\frac{1}{4}+\frac{1}{4}+\frac{1}{4}+\frac{1}{4}\right)\mathbf{\Sigma}\\ \\ 
+&=1 \times \mathbf{\Sigma} =\mathbf{\Sigma}\\ \\ 
+&=\begin{bmatrix}
+3 & -1 & 1\\ -1 & 1 &0 \\ 1 & 0& 2
+\end{bmatrix}
+\end{align*}
+$$
+
+3. La varianza de: 
+
+$$
+\underline{\mathbf{v}}=\begin{bmatrix}
+c_1\underline{\mathbf{x}}_1+c_2\underline{\mathbf{x}}_2+
+c_3\underline{\mathbf{x}}_3+
+c_4\underline{\mathbf{x}}_4\\ \\  b_1\underline{\mathbf{x}}_1+b_2\underline{\mathbf{x}}_2+
+b_3\underline{\mathbf{x}}_3+b_4\underline{\mathbf{x}}_4
+\end{bmatrix}=\begin{bmatrix}
+\frac{1}{2}\underline{\mathbf{x}}_1+
+\frac{1}{2}\underline{\mathbf{x}}_2+\frac{1}{2}\underline{\mathbf{x}}_3+\frac{1}{2}\underline{\mathbf{x}}_4 \\ \\
+\underline{\mathbf{x}}_1+\underline{\mathbf{x}}_2+
+\underline{\mathbf{x}}_3-3\underline{\mathbf{x}}_4
+\end{bmatrix}=\begin{bmatrix}
+\underline{\mathbf{v}}_{\ 1} \\ \\ \underline{\mathbf{v}}_{\ 2}
+\end{bmatrix}_{6 \times 1}
+$$
+
+Sea  
+
+$$
+\underline{\mathbf{v}}=\begin{bmatrix} \underline{\mathbf{v}}_{\ 1} \\ \\ \underline{\mathbf{v}}_{\ 2} \end{bmatrix}
+$$
+
+luego:
+
+$$
+\begin{align*}
+\Sigma_{\ \underline{\mathbf{v}}}=Var \biggl[\underline{\mathbf{v}}\biggr]&= \begin{pmatrix}
+Var(\underline{\mathbf{v}}_{\ 1}) & | & Cov(\underline{\mathbf{v}}_{\ 1}\ , \ \underline{\mathbf{v}}_{\ 2}) \\
+-- & -- & -- \\
+Cov(\underline{\mathbf{v}}_{\ 2}\ , \ \underline{\mathbf{v}}_{\ 1}) & | & Var(\underline{\mathbf{v}}_{\ 2})
+\end{pmatrix}\\
+& \\
+&=\begin{bmatrix}
+\left( \sum_{i=1}^n c_i^2\right) \mathbf{\Sigma}& \vdots &  \left( \sum_{i=1}^n b_ic_i\right) \mathbf{\Sigma} \\
+\cdots\cdots & & \cdots\cdots \\
+\left( \sum_{i=1}^n b_ic_i\right) \mathbf{\Sigma} & \vdots & \left( \sum_{i=1}^n b_i^2\right)\mathbf{\Sigma}
+\end{bmatrix}\\ 
+&\\ 
+&=\begin{bmatrix}
+\left( \underline{c}^t\underline{c} \right) \mathbf{\Sigma} & \vdots &  \left( \underline{b}^t\underline{c} \right) \mathbf{\Sigma} \\
+\cdots\cdots & & \cdots\cdots \\
+\left( \underline{b}^t\underline{c} \right) \mathbf{\Sigma} & \vdots & \left( \underline{b}^t\underline{b}\right) \mathbf{\Sigma}
+\end{bmatrix}_{6 \times 6}\\
+&\\ 
+&=\begin{bmatrix}
+1 \times \mathbf{\Sigma} & \vdots &  0 \times \mathbf{\Sigma} \\
+\cdots\cdots & & \cdots\cdots \\
+0\times  \mathbf{\Sigma} & \vdots & 12 \times \mathbf{\Sigma}
+\end{bmatrix}=\begin{bmatrix}
+\mathbf{\Sigma} & \vdots &  \mathbf{0} \\
+\cdots\cdots & & \cdots\cdots \\
+\mathbf{0} & \vdots & 12\mathbf{\Sigma}
+\end{bmatrix}
+\end{align*}
+$$
+
+es decir,
+$$
+\Sigma_{\ \underline{\mathbf{v}}}=Var \biggl[\underline{\mathbf{v}}\biggr]= \begin{bmatrix}
+\mathbf{\Sigma} & \vdots &  \mathbf{0} \\
+\cdots\cdots & & \cdots\cdots \\
+\mathbf{0} & \vdots & 12 \mathbf{\Sigma}
+\end{bmatrix}=\begin{bmatrix}
+\begin{matrix}
+3 & -1 & 1\\ -1 & 1 &0 \\ 1 & 0& 2
+\end{matrix} & \vdots &  \begin{matrix}
+0 & 0 & 0\\ 0 & 0 &0 \\ 0 & 0& 0
+\end{matrix} \\
+\cdots\cdots & & \cdots\cdots \\
+\begin{matrix}
+0 & 0 & 0\\ 0 & 0 &0 \\ 0 & 0& 0
+\end{matrix} & \vdots & \begin{matrix}
+36 & -12 & 12\\ -12 & 12 &0 \\ 12 & 0& 24
+\end{matrix}
+\end{bmatrix}
+$$
+
+## Evaluación del Supuesto de Normalidad Multivariada
+
+Evaluar el supuesto de normalidad multivariada es importante para facilitar los procesos de inferencia estadística. 
+
+Existen varios métodos o alternativas para evaluar el supuesto de  normalidad multivariada de un vector aleatorio. 
+
+Cuando $n$-es grande y los métodos de evaluación utilizados se basan en el vector de medias muestrales $\overline{\underline{\mathbf{x}}}$ o en ciertas distancias que involucran dicho vector de medias muestrales, el supuesto de normalidad multivariada parece no ser tan crucial. En este caso la calidad de las inferencias realizadas, dependerá de qué tan parecida sea la distribución del vector de medias muestrales $\overline{\underline{\mathbf{x}}}$ a una normal multivariada.
+
+También es importante tener métodos para identificar cuando la distribución de un vector aleatorio se aleja de la normalidad  multivariada, y así tener cuidado con los análisis posteriores.
+
+**Propiedad de la Normal-Multivariada**
+
+Recordar que bajo el supuesto de normalidad multivariada de un vector aleatorio $\underline{\mathbf{x}}_{p\times 1}$, cualquier combinación lineal de las componentes de dicho vector tiene una distribución normal univariada.
+
+Los gráficos de contorno de la normal tri-variada son elipsoides (o hiperelipsoides) y para el caso particular de $p=2$ (normal bi-variada) son elipses.
+
+**Preguntas Adecuadas:**
+
+Algunos pasos previos antes de evaluar la normalidad multivariada, corresponden a responder las siguientes preguntas:
+
+1. ¿Son las distribuciones marginales del vector aleatorio, parecídas a normales univariadas?
+
+2. ¿Es la distribución de alguna combinación lineal de las componentes de $\underline{\mathbf{x}}_{p\times 1}$, NO parecida a una normal univariada?
+
+3. ¿Al hacer gráficos de dispersión por pares de componentes de 
+$\underline{\mathbf{x}}_{p\times 1}$, presentan algunos de ellos comportamientos no elípticos?
+
+4. ¿Existen datos atípicos a nivel marginal o a nivel bivariado?
+
+**Métodos prácticos:**
+
+En la práctica para evaluar el supuesto de normalidad multivariado, generalmente se procede analizando la normalidad de las marginales del vector $\underline{\mathbf{x}}_{p\times 1}$ y analizando la normalidad bivariada de pares de componentes de dicho vector. 
+
+No es frecuente, en la práctica, encontrar conjuntos de datos normales en bajas dimensiones  (ie, $p=1$ o $p=2$) y que no lo sean en altas dimensiones, pero hay que tener en cuenta que **la normalidad univariada no implica la normalidad multivariada**, ver un ejemplo en el EJERCICIO 4.8 de [@johnson2007applied], un caso de normalidad univariadas que no implica Normalidad-bi-variada.
+
+### Evaluación a nivel marginal (ie. Normalidad Univariada)
+
+Existen varios enfoques para evaluar la normalidad Uni-variada, entre ellos están los siguientes.
+
+1. Gráficos como los son los histogramas, cajas de bigote, etc.
+
+2. Gráficos $qq$-plot y $NPP$.
+
+3. Prueba de Normalidad basada en el coeficiente de correlación de los puntos del $qq$-plot.
+
+4. Análisis de las combinaciones lineales de las variables del vector.
+
+5. Pruebas formales de Normalidad.
+
+A continuación se explican de manera breve cada uno de estos procedimientos.
+
+#### Gráficos: histogramas, cajas de bigote, diagrams de puntos, etc.
+
+Generalmente se utilizan los histogramas o cajas de bigotes cuando la muestra es de tamaño moderado o grande y los diagramas de puntos en el caso de $n$-pequeño, para detectar alejamientos de la simetría  de los datos, una cola parece ser mayor que otra.
+
+#### Gráficos $qq$-plot.
+
+Uso del gráficos cuantil-cuantil o $qq$-plot. Este gráfico puede ser usado para evaluar la normalidad de cada variable. 
+
+En él se grafican los cuantiles muestrales contra los
+cuantiles que se esperaría observar si las observaciones
+realmente provienen de una distribución normal.
+
+Los pasos para construir un $Q-Q$-plot son:
+
+a.) Ordene las observaciones originales de menor a
+mayor. 
+
+Sean $X_{(1)}, X_{(2)}, \cdots,  X_{(n)}$, las observaciones ordenadas. 
+
+Las probabilidades correspondientes a ellos son:
+$$
+\frac{\left(1-\frac{1}{2} \right)}{n},\frac{\left(2-\frac{1}{2} \right)}{n}, \cdots , \frac{\left(n-\frac{1}{2} \right)}{n}
+$$
+Lo anterior quiere decir, que la proporción $i/n$-de la muestra que está a la izquierda del $i$-ésimo estadítico de orden, $X_{(i)}$, se aproxima por: 
+$$
+\frac{i-\frac{1}{2}}{n}
+$$
+
+b.) Se calculan los cuantiles de la normal estándar: $q_{(1)}, q_{(2)},
+\cdots , q_{(n)}$, correspondientes a las probabilidades anteriores.
+
+c.) Se grafican los pares de observaciones:
+$$
+\bigl[q_{(1)}\ ,\ X_{(1)}\bigr]\ ,\ \bigl[q_{(2)}\ ,\ X_{(2)}\bigr]\ ,\ \cdots \ ,\ \bigl[q_{(n)}\ ,\ X_{(n)}\bigr].
+$$
+
+*Si los datos proceden de una distribución normal, se espera que el gráfico anterior sea aproximadamente una línea recta*.
+
+Lo anterior significa que los pares $[q_{(i)},X_{(i)}]$  estarán aproximadamente relacionados de forma lineal, ya que $\sigma q_{(j)}+\mu$ estará muy cerca del cuantil muestral esperado.
+
+#### Normal-Probability-Plot (NPP)
+
+En Normal-Probability-Plot ($NPP$), se grafican las parejas, $\bigl[m_{(i)}\ , \ x_{(i)}\bigr]$, donde $m_{(i)}=E\bigl[Z_{(i)}\bigr]$-es el valor esperado del $i$-ésimo estadístico de orden en una muestra de tamaño $n$ de una normal estándar. 
+
+Este gráfico debe dar similar al $qq$-plot, ie. una línea recta. 
+
+Estos gráficos $qq$-plot y NPP no son muy claro, a menos que los  tamaños de muestra sean moderadamente grandes, (ie. por ejemplo $n\geq 20$), ya que pueden mostrar observaciones muy alejadas de una tendencia lineal, aún cuando se sabe que los datos provienen de una distribución normal.
+
+**Ejemplo:**
+Considere una muestra de tamaño $n=10$ observaciones, las cuales fueron ordenadas de menor a mayor como se muestra en la siguiente tabla.
+
+|Observaciones Ordenadas $x_{(j)}$|Probabilidades $\left(j-\frac{1}{2} \right)/n$|Quantiles de la $N(0,1)$ $q_{(j)}$|
+|:-------------------:|:-------------------------------:|:---------------------:|
+|        -1.00        |               0.05              |         -1.645        |
+|        -0.10        |               0.15              |         -1.036        |
+|         0.16        |               0.25              |         -0.674        |
+|         0.41        |               0.35              |         -0.385        |
+|         0.62        |               0.45              |         -0.125        |
+|         0.80        |               0.55              |         0.125         |
+|         1.26        |               0.65              |         0.385         |
+|         1.54        |               0.75              |         0.674         |
+|         1.71        |               0.85              |         1.036         |
+|         2.30        |               0.95              |         1.645         |
+
+
+Por ejemplo, para el cálculo del cuantil de la $N(0,1)$, para una probabilidad de $0.65$ busca el cuantil que satisface:
+$P[Z<q_{(7)}]=0.65$,
+
+de donde se tiene que dicho cuantil es: $q(7)=0.385$, puesto que:
+$$
+P[Z<0.385]=\int_{-\infty}^{0.385} \frac{1}{\sqrt{2\pi}} e^{-z^2/2}dz=0.65.
+$$
+La construcción del $qq$-plot se basa en el diagrama de
+dispersión de los puntos $(q_{(j)}, x_{(j)}),\ \ j=1, 2, \cdots, 10$, el cual es:
+
+
+```{r echo=F, graf-qqplot, fig.cap='Gráfica de un QQ-Plot', fig.show='hold', fig.width=7, fig.asp=.8, out.width='80%',  fig.align='center'}
+library(shape)
+x<-c(-1,0.10,0.16,0.41,0.62,0.8,1.26,1.54,1.71,2.3)
+y<-c(0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95)
+
+q<-qnorm(y)
+par(pty="s")
+plot(q,x,pch=20,xlim=c(-2,2),ylim=c(-2,2),xlab="",ylab="",frame=F)
+Arrows(-2,0,2,0,lwd=1, arr.type="triangle",lty=2)
+Arrows(0,-2,0,2,lwd=1, arr.type="triangle",lty=2)
+mtext("X(j)", side=3, at=0 , adj = 0, cex = 0.8)
+mtext("q(j)", side=4, at=0, las=2, adj = 0, cex = 0.8)
+```
+
+los cuales caen muy cerca de una línea recta, lo que conduce a no rechazar la hipótesis de que estos datos son de una distribución normal.
+
+**Ejemplo:**
+
+El departamento de control de calidad de una empresa que produce hornos micro-ondas requiere monitorear la cantidad de radiación emitida por dichos micro-ondas cuando tienen la tapa cerrada.
+Aleatoriamente se eligieron $n=42$ hornos y se observó dicha
+cantidad de radiación emitida por ellos con la tapa cerrada. 
+
+
+| Horno | Radiación | Horno | Radiación | Horno | Radiación | Horno | Radiación |
+|:-----:|:---------:|:-----:|:---------:|:-----:|:---------:|:-----:|:---------:|
+|   1   |    0.15   |   12  |    0.02   |   23  |    0.03   |   34  |    0.30   |
+|   2   |    0.09   |   13  |    0.01   |   24  |    0.05   |   35  |    0.02   |
+|   3   |    0.18   |   14  |    0.10   |   25  |    0.15   |   36  |    0.20   |
+|   4   |    0.10   |   15  |    0.10   |   26  |    0.10   |   37  |    0.20   |
+|   5   |    0.05   |   16  |    0.10   |   27  |    0.15   |   38  |    0.30   |
+|   6   |    0.12   |   17  |    0.02   |   28  |    0.09   |   39  |    0.30   |
+|   7   |    0.08   |   18  |    0.10   |   29  |    0.08   |   40  |    0.40   |
+|   8   |    0.05   |   19  |    0.01   |   30  |    0.18   |   41  |    0.30   |
+|   9   |    0.08   |   20  |    0.40   |   31  |    0.10   |   42  |    0.05   |
+|   10  |    0.10   |   21  |    0.10   |   32  |    0.20   |       |           |
+|   11  |    0.07   |   22  |    0.05   |   33  |    0.11   |       |           |
+
+
+El $qq$-plot para estos datos es:
+
+```{r echo=F, grafico-ejemplo2-qqplot2, fig.cap='Gráfica de un QQ-Plot', fig.show='hold', fig.width=7, fig.asp=.8, out.width='80%',  fig.align='center'}
+x1<-c(0.151,0.091,0.181,0.10111111111,0.051,0.12,0.081,0.0511,0.0811,0.101,
+0.07,0.021,0.01,0.1011,0.10111,0.101111,0.021,0.1011111,0.011,0.401,0.10111111,0.05111,0.03,0.051111,
+0.1511,0.101111111,0.15111,0.0911,0.08111,0.1811,0.1011111111,0.211,0.11,0.301,0.02111,0.2011,0.20111,0.3011,0.30111,0.4011,0.301111,0.0511111)
+x1<-sort(x1)
+y<-c(rep(0,length(x1)))
+for(j in 1:length(x1)){
+y[j]<-(j-0.5)/length(x1)
+}
+q<-qnorm(y)
+q1<-c(mean(q[1:2]),mean(q[3:5]),q[6],mean(q[7:11]),q[12],mean(q[13:15]),
+mean(q[16:17]),mean(q[18:26]),q[27],q[28],mean(q[29:31]),mean(q[32:33]),
+mean(q[34:36]),mean(q[37:40]),mean(q[41:42]))
+
+#library(shape)
+x<-c(0.01,0.02,0.03,0.05,0.07,0.08,0.09,0.10,0.11,0.12,0.15,0.18,0.20,0.30,0.40)
+
+par(pty="s")
+plot(q1,x,pch=20,xlim=c(-2,3),ylim=c(0,0.4),xlab="",ylab="",frame=F)
+Arrows(-2,0,3,0,lwd=1, arr.type="triangle",lty=2)
+Arrows(-2,0,-2,0.4,lwd=1, arr.type="triangle",lty=2)
+mtext("X(j)", side=3, at=-2 , adj = 0, cex = 0.8)
+mtext("q(j)", side=4, at=0, las=2, adj = 0, cex = 0.8)
+
+text(max(q1)-0.09,max(x), "O", las=2, adj = 0, cex = 1)
+text(max(q1[-15])-0.09,max(x[-15]), "O", las=2, adj = 0, cex = 1)
+```
+
+La apariencia del gráfico indica que los datos no parecen provenir de una distribución normal. Los puntos señalados con un círculo son observaciones atípicas, pues están muy lejos del resto de los datos.
+
+**Observación:**
+
+Para esta muestra de datos de radiación, varias observaciones son iguales (observaciones empatadas). Cuando esto ocurre, a las observaciones con valores iguales se les asigna un mismo cuantil, el cual se obtiene usando el promedio de los cuantiles que ellas hubieran tenido si hubieran sido ligeramente distintas.
+
+#### Prueba de Normalidad basada en el Coeficiente de Correlación de los puntos del $qq$-plot.
+
+La linealidad de un gráfico $qq$-plot puede ser medida calculando el coeficiente de correlación para los puntos de dicho gráfico, el cual esta dado por:
+$$
+r_Q=\frac{\sum_{j=1}^n (x_{(j)}-\overline{x})(q_{(j)}-\overline{q})}
+{\sqrt{\sum_{j=1}^n (x_{(j)}-\overline{x})^2}\sqrt{\sum_{j=1}^n (q_{(j)}-\overline{q})^2}}
+$$
+Basados en este coeficiente de correlación, se puede construir una prueba potente de normalidad, ver. [@filliben1975; @looney1985] ( Shapiro y Wilk, 1965). Formalmente, se rechaza la hipótesis de
+normalidad a un nivel de significancia de $\alpha$ si $r_Q < r_Q(\alpha ,n)$ donde los valores críticos $r_Q(\alpha ,n)$ se encuentran en la siguiente tabla: 
+
+|  Tamaño de muestra $n$  | Nivel de Significancia $\alpha$        |
+|:-----------|:--------------------------------------------------:|
+
+|             |               0.01               |  0.05  |  0.10  |
+|:-----------:|:--------------------------------:|:------:|:------:|
+|      5      |              0.8299              | 0.8788 | 0.9032 |
+|      10     |              0.8801              | 0.9198 | 0.9351 |
+|      15     |              0.9126              | 0.9389 | 0.9503 |
+|      20     |              0.9269              | 0.9508 | 0.9604 |
+|      25     |              0.9410              | 0.9591 | 0.9665 |
+|      30     |              0.9479              | 0.9652 | 0.9715 |
+|      35     |              0.9538              | 0.9682 | 0.9740 |
+|      40     |              0.9599              | 0.9726 | 0.9771 |
+|      45     |              0.9632              | 0.9749 | 0.9792 |
+|      50     |              0.9671              | 0.9768 | 0.9809 |
+|      55     |              0.9695              | 0.9787 | 0.9822 |
+|      60     |              0.9720              | 0.9801 | 0.9836 |
+|      75     |              0.9771              | 0.9838 | 0.9866 |
+|     100     |              0.9822              | 0.9873 | 0.9895 |
+|     150     |              0.9879              | 0.9913 | 0.9928 |
+|     200     |              0.9905              | 0.9931 | 0.9942 |
+|     300     |              0.9935              | 0.9953 | 0.9960 |
+
+**Ejemplo:**
+
+Para el primer ejemplo donde $n=10$, ver. ejemplo-\@ref(exm:ejemplo1-qqplot), el cálculo del coeficiente de correlación entre los puntos $(q_{(j)}, X_{(j)})$,  $j=1, 2, \cdots, 10$, del gráfico $qq$-plot es:
+$$
+r_Q=\frac{\sum_{j=1}^{10} (x_{(j)}-\overline{x})(q_{(j)}-\overline{q})}
+{\sqrt{\sum_{j=1}^{10} (x_{(j)}-\overline{x})^2}\sqrt{\sum_{j=1}^{10} (q_{(j)}-\overline{q})^2}}=\frac{8.584}{\sqrt{8.472}\sqrt{8.795}}=0.994,
+$$
+de donde, para un nivel de significancia $\alpha =0.10$, el valor crítico de la tabla es: $r_Q(0.10, 10)= 0.9351$, luego como $r_Q=0.994>0.9351=r_Q(0.10, 10)$, entonces no rechazamos la hipótesis de normalidad.
+
+**Ejemplo:**
+
+Para el ejemplo de los datos de radiación emitida por micro-ondas cuando tienen la tapa cerrada, ver. ejemplo-\@ref(exm:ejemplo2-qqplot), se tienen los sigueintes resutados.
+
+```{r, echo=FALSE,cache=TRUE,results="asis",comment=FALSE,message=FALSE}
+library(ppcc)
+horno_cerrado <- read.table('datos/T4-1.DAT',header=F)
+res <- ppccTest(horno_cerrado, "qnorm")
+res
+#shapiro.test(horno_cerrado[,1])
+```
+
+de donde como el valor-p de la prueba dado por: `r format(res[3],scientific=F)` es menor que $\alpha=0.05$, luego se rechaza la hipótesis nula de normalidad de los datos.
+
+
+**Observación:** 
+
+Para muestras grandes, las pruebas basadas en $r_Q$ y la prueba de Shapiro Wilk (una prueba potente de normalidad) son aproximadamente las mismas.
+
+**La prueba de Shapiro-Wilk** para este conjunto de datos da como resultados los siguientes:
+
+```{r, echo=FALSE, results="asis",comment=FALSE,message=FALSE}
+res <- shapiro.test(horno_cerrado[,1])
+
+res
+```
+
+
+#### Análisis de las combinaciones lineales de las variables del vector.
+
+Considere los valores propios de $\mathbf{S}$, $\hat{\lambda}_1,\hat{\lambda}_2,\ldots,\hat{\lambda}_p$ y sus correspondientes vectores propios $\hat{\underline{\mathbf{e}}}_1,\hat{\underline{\mathbf{e}}}_2,\ldots,\hat{\underline{\mathbf{e}}}_p$. Se sugiere verificar normalidad para las combinaciones lineales dadas por:
+$$
+\hat{\underline{\mathbf{e}}}_1^t \underline{\mathbf{x}}_j \ \ \ \text{y}  \ \ \ \ \hat{\underline{\mathbf{e}}}_p^t \underline{\mathbf{x}}_j
+$$
+donde $\hat{\underline{\mathbf{e}}}_1$ y $\hat{\underline{\mathbf{e}}}_p$  son los vectores propios correspondientes al mayor y menor valor propio de $\mathbf{S}$, respectivamente.
+
+#### Pruebas formales de Normalidad. 
+
+Además de todas las ayudas anteriores, se pueden hacer pruebas formales de normalidad para el caso univariado, como lo son: 
+Kolmogorov-Smirnov, Shapiro-Wilks,Anderson-Darling,Cramer-Von-Mises, etc.
+
+### Evaluación de la Normalidad Bi-variada
+
+Si las observaciones fueran generadas por un distribución normal
+multivariada ($p>2$), todas las distribuciones bivariadas ($p=2$) deberían ser normales y los contornos de densidad constante deberían ser elipses. Observe el siguiente diagrama de dispersión generado por una muestra simulada de una normal bivariada.
+
+```{r echo=F, cache=TRUE, disp-datos-NB, fig.cap='Datos Normales Bivariados', fig.show='hold', out.width='80%', fig.asp=.95, fig.align='center'}
+
+source("funcionesR/funciones_cap2.R", local = knitr::knit_global())
+
+library(latex2exp)
+library(MASS)
+
+texto6 <- latex2exp::TeX('Para \ \ $\\underline{\\mu}$\ \ y\ \ $\\Sigma$')
+
+mu=c(0,0)
+sigma<-matrix(c(.9,0.7,0.7,0.9),ncol=2)
+datos2<-mvrnorm(n=1000, mu,sigma)
+representa2(datos2,0.50,0.95,texto6)
+```
+
+$$
+\underline{\boldsymbol{\mu}}=\begin{bmatrix} 0 \\ 0 \end{bmatrix} \ \ \ , \ \ \ \mathbf{S}=\begin{bmatrix} 0.9 & 0.7 \\ 0.7 & 0.9  \end{bmatrix} \ \ , \ \mathbf{R}=\begin{bmatrix} 1 & 0.78 \\ 0.78 & 1  \end{bmatrix}
+$$
+
+Además, por resultado mencionado anteriormente, ver. propiedades de la NM \@ref(prop8), el conjunto de puntos bivariados $\underline{\mathbf{x}}$ tales que:
+$$
+(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})\leq  \chi_{\alpha}^2(2)
+$$
+tiene una probabilidad $1-\alpha$, ie.
+$$
+P[(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})^t\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}} -\underline{\boldsymbol{\mu}})\leq  \chi_{\alpha}^2(2)]=1-\alpha.
+$$
+Por ejemplo, si $\alpha =0.5$, para muestras grandes se esperaría que alrededor del $50\%$ de las observaciones caigan dentro de la elipse dada por:
+$$
+(\underline{\mathbf{x}} -\underline{\overline{\mathbf{x}}})^tS^{-1}(\underline{\mathbf{x}} -\underline{\overline{\mathbf{x}}})\leq  \chi_{0.5}^2(2)=1.39
+$$
+Si no se cumple esto, entonces la normalidad bi-variada es sospechosa.
+
+**Ejemplo:**
+
+Considere los pares de datos para las variables $X_1=$ventas y
+$X_2=$ganancias para las $10$ mayores corporaciones industriales de E.U. Observe que este conjunto de datos no forman una muestra aleatoria.
+
+| Compañía | $X_1$-Ventas (Billones) | $X_2$-Ganancias  (Billones) | $X_3$-Activo (Billones) |
+|---------------------|-------------:|----------------:|-------------:|
+| Citigroup           |       108.28 |           17.05 |      1484.10 |
+| General Electric    |       152.36 |           16.59 |       750.33 |
+| American Intl Group |        95.04 |           10.91 |       766.42 |
+| Bank of America     |        65.45 |           14.14 |      1110.46 |
+| HSBC Group          |        62.97 |            9.52 |      1031.29 |
+| ExxonMobil          |       263.99 |           25.33 |       195.26 |
+| Royal Dutch/Shell   |       265.19 |           18.54 |       193.83 |
+| BP                  |       285.06 |           15.73 |       191.11 |
+| ING Group           |        92.01 |            8.10 |      1175.16 |
+| Toyota Motor        |       165.68 |           11.13 |       211.15 |
+
+
+Para estos datos se tiene que:
+
+$$
+\underline{\overline{\mathbf{x}}}=\begin{bmatrix}
+155.60 \\ 14.70
+\end{bmatrix} \ , \ \ \ \ \ S=\begin{bmatrix}
+7476.45 & 303.62 \\
+303.62 & 26.19
+\end{bmatrix}
+$$
+
+$$
+S^{-1}=\frac{1}{103623.12}\begin{bmatrix}
+26.19 & -303.62 \\
+-303.62 & 7476.45
+\end{bmatrix}
+$$
+Para $\alpha =0.5$, a partir de la distribución chi-cuadrado con $p=2$-grados de libertad, se obtiene que: $\chi_{0.5}^2(2)=1.39$, de donde, cualquier observación $\underline{\mathbf{x}}=(x1, x2)$ que cumpla la siguiente desigualdad:
+$$
+\begin{bmatrix}
+x_1-155.60 & x_2-14.70
+\end{bmatrix}\left(\begin{bmatrix}
+0.000253 & -0.002930 \\ -0.002930 & 0.072148
+\end{bmatrix}\times 10^{-5}\right)\begin{bmatrix}
+x_1-155.60 \\ x_2-14.70
+\end{bmatrix} \leq 1.39,
+$$
+
+debe estar sobre o dentro del contorno estimado del $50\%$ de probabilidad. De lo contrario la observación estaría por fuera.
+
+Para las 10 observaciones observadas se tiene que  sus distancias generalizadas son: 
+
+161, **0.30**,  **0.62**, 1.79, **1.30**, 4.38, 1.64, 3.53, 1.71 \ \ \text{y}\ \  **1.16**.
+
+Si los datos proceden de una distribución normal, se esperaría que aproximadamente el $50\%$ de las observaciones caiga dentro o sobre el contorno estimado anterior, o dicho de otro modo, el 
+$50 \%$ de las distancias calculadas deberían ser menores o iguales que 1.39.
+
+Se observa que en total 4 de estas 10 distancias son menores que 1.39, lo que implica que la proporción estimada de observaciones que cumplen la desigualdad es del $40 \%$.
+ 
+La diferencia entre de esta proporción con el $50 \%$ (ie. un $10 \%$ de diferencia) proporciona una evidencia para rechazar la normalidad bivariada en estos datos. Sin embargo, la muestra es muy pequeña para permitir obtener esta conclusión.
+
+#### Otro Método (Gráfico Chi-Cuadrado)
+
+El procedimiento anterior es útil, pero bastante burdo. Un
+método más formal para evaluar la normalidad conjunta está
+basado en las distancias cuadráticas generalizadas, dadas por:
+$$
+d_i^2=(\underline{\mathbf{x}}_i -\underline{\overline{\mathbf{x}}})^tS^{-1}(\underline{\mathbf{x}}_i -\underline{\overline{\mathbf{x}}})\ ,\ \text{para} \ \ i=1,2,\ldots, n,
+$$
+donde, $\underline{\mathbf{x}}_i$-son las observaciones muestrales.
+
+El siguiente procedimiento, no está limitado al caso bi-variado, por lo que puede ser usado par $p\geq 2$.
+
+Cuando la población es normal multivariada y cuando tanto $n$ como $n-p$ son grandes, por ejemplo, ($\geq 25\ o \ 30$), cada una de las distancias al cuadrado $d_j^2$-anterior, deberían comportarse como una variable aleatoria con distribución $\chi^2$.
+
+Aunque, estas distancias no son independientes o distribuidas chi-cuadrados exactamente, es útil graficarlas como si lo fueran.
+
+El gráfico resultante es llamado **Gráfico Chi-Cuadrado**, y se construye de la siguiente manera:
+
+1.) Se Ordenan las distancias de menor a mayor:
+$$
+d_{(1)}^2 \leq d_{(2)}^2 \leq  \ldots d_{(n)}^2
+$$
+2. Se grafican los pares: 
+$$
+\left( q_{c,p} \left( \frac{i - \frac{1}{2}}{n} \right) \ , \ d_i^2 \right)\ , \ i=1,2,\ldots,n
+$$
+donde, $q_{c,p} \left( \frac{ i - \frac{1}{2}}{n} \right)$-es el cuantil $100\left(i-\frac{1}{2} \right)/n$ de la distribución chi-cuadrado con $p$-grados de libertad, ie. se cumple que:
+$$
+P\left[\chi^2_{(p)} \leq q_{c,p} \left( \frac{ i - \frac{1}{2}}{n} \right) \right]=\frac{ i - \frac{1}{2}}{n}
+$$
+
+Bajo normalidad, el gráfico debería mostrar un patrón lineal a través del origen y con pendiente 1. Un patrón sistemáticamente curvo sugiere falta de normalidad multivariada.
+
+**Ejemplo:**
+Gráfico chi-cuadrado para los datos del ejemplo anterior. Las distancias ordenadas y los correspondientes percentiles chi-cuadrado se muestran en la siguiente tabla:
+
+| Observaciones  $i$ | Distancias  Ordenadas $d_{(i)}^2$ | Quantiles $q_{c,2}\left(\frac{i-\frac{1}{2}}{10} \right)$ $\chi_2^2$ de             |
+|:-------------:|:---------------------:|:-----------------------------------------------:|
+|       1       |          0.30         |                       0.10                      |
+|       2       |          0.62         |                       0.33                      |
+|       3       |          1.16         |                       0.58                      |
+|       4       |          1.30         |                       0.86                      |
+|       5       |          1.61         |                       1.20                      |
+|       6       |          1.64         |                       1.60                      |
+|       7       |          1.71         |                       2.10                      |
+|       8       |          1.79         |                       2.77                      |
+|       9       |          3.53         |                       3.79                      |
+|       10      |          4.38         |                       5.99                      |
+
+
+
+y el gráfico chi-cuadrado para estos datos es:
+
+```{r echo=F,  grafico-ejemplo-chi2, fig.cap='Gráfico Chi-Cuadrado', fig.show='hold', fig.width=7, fig.asp=.8, out.width='80%' , fig.align='center'}
+d2<-c(0.30,0.62,1.16,1.30,1.61,1.64,1.71,1.79,3.53,4.38)
+y<-c(0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95)
+
+q<-qnorm(y)
+q<-qchisq(y,2)
+
+par(pty="s")
+plot(q,d2,pch=20,xlim=c(0,7),ylim=c(0,6),xlab="",ylab="",frame=F)
+Arrows(0,0,7,0,lwd=1, arr.type="triangle",lty=2)
+Arrows(0,0,0,6,lwd=1, arr.type="triangle",lty=2)
+mtext("d(j)^2", side=3, at=0 , adj = 0, cex = 0.8)
+mtext("q(c,2)", side=4, at=0, las=2, adj = 0, cex = 0.8)
+```
+
+Se observa que los puntos no caen en una línea recta de pendiente 1.Por lo que no se apoya la normalidad bi-variada en estos datos. Aunque hay que tener en cuenta que $n$ es pequeño en este ejemplo.
+
+**NOTA:** CONSULTAR PRUEBAS MULTIVARIADAS DE ASIMETRÍA Y KURSTOSIS.
+
+**Ejemplo:**
+
+La siguiente tabla tiene las distancias ordenadas y los percentiles chi-cuadrado al igual que el gráfico  chi- cuadrado, para una muestra 4-variada.
+
+|    | $x_1$ | $x_2$ | $x_3$ | $x_4$ | $d_2$ | $q(c,4)$ |
+|---:|------:|------:|------:|------:|------:|---------:|
+|  1 |  1889 |  1651 |  1561 |  1778 |  0.60 |     0.39 |
+|  2 |  2403 |  2048 |  2087 |  2197 |  5.48 |     0.71 |
+|  3 |  2119 |  1700 |  1815 |  2222 |  7.62 |     0.95 |
+|  4 |  1645 |  1627 |  1110 |  1533 |  5.21 |     1.17 |
+|  5 |  1976 |  1916 |  1614 |  1883 |  1.40 |     1.37 |
+|  6 |  1712 |  1712 |  1439 |  1546 |  2.22 |     1.56 |
+|  7 |  1943 |  1685 |  1271 |  1671 |  4.99 |     1.74 |
+|  8 |  2104 |  1820 |  1717 |  1874 |  1.49 |     1.92 |
+|  9 |  2983 |  2794 |  2412 |  2581 | 12.26 |     2.10 |
+| 10 |  1745 |  1600 |  1384 |  1508 |  0.77 |     2.29 |
+| 11 |  1710 |  1591 |  1518 |  1667 |  1.93 |     2.47 |
+| 12 |  2046 |  1907 |  1627 |  1898 |  0.46 |     2.66 |
+| 13 |  1840 |  1841 |  1595 |  1741 |  2.70 |     2.85 |
+| 14 |  1867 |  1685 |  1493 |  1678 |  0.13 |     3.05 |
+| 15 |  1859 |  1649 |  1389 |  1714 |  1.08 |     3.25 |
+| 16 |  1954 |  2149 |  1180 |  1281 | 16.85 |     3.46 |
+| 17 |  1325 |  1170 |  1002 |  1176 |  3.50 |     3.69 |
+| 18 |  1419 |  1371 |  1252 |  1308 |  3.99 |     3.92 |
+| 19 |  1828 |  1634 |  1602 |  1755 |  1.36 |     4.17 |
+| 20 |  1725 |  1594 |  1313 |  1646 |  1.46 |     4.44 |
+| 21 |  2276 |  2189 |  1547 |  2111 |  9.90 |     4.73 |
+| 22 |  1899 |  1614 |  1422 |  1477 |  5.06 |     5.04 |
+| 23 |  1633 |  1513 |  1290 |  1516 |  0.80 |     5.39 |
+| 24 |  2061 |  1867 |  1646 |  2037 |  2.54 |     5.77 |
+| 25 |  1856 |  1493 |  1356 |  1533 |  4.58 |     6.22 |
+| 26 |  1727 |  1412 |  1238 |  1469 |  3.40 |     6.74 |
+| 27 |  2168 |  1896 |  1701 |  1834 |  2.38 |     7.39 |
+| 28 |  1655 |  1675 |  1414 |  1597 |  3.00 |     8.24 |
+| 29 |  2326 |  2301 |  2065 |  2234 |  6.28 |     9.49 |
+| 30 |  1490 |  1382 |  1214 |  1284 |  2.58 |    12.09 |
+
+
+```{r echo=F,  grafico-ejemplo2-chi2, fig.cap='Gráfico Chi-Cuadrado', fig.show='hold', fig.width=7, fig.asp=.8, out.width='80%' , fig.align='center'}
+x<-c(1889,2403,2119,1645,1976,1712,1943,2104,2983,1745,1710,2046,1840,1867,1859,1954,1325,
+1419,1828,1725,2276,1899,1633,2061,1856,1727,2168,1655,2326,1490)
+
+y<-c(1651,2048,1700,1627,1916,1712,1685,1820,2794,1600,1591,1907,1841,1685,1649,2149,1170,
+1371,1634,1594,2189,1614,1513,1867,1493,1412,1896,1675,2301,1382)
+
+z<-c(1561,2087,1815,1110,1614,1439,1271,1717,2412,1384,1518,1627,1595,1493,1389,1180,1002,
+1252,1602,1313,1547,1422,1290,1646,1356,1238,1701,1414,2065,1214)
+
+w<-c(1778,2197,2222,1533,1883,1546,1671,1874,2581,1508,1667,1898,1741,1678,1714,1281,1176,
+1308,1755,1646,2111,1477,1516,2037,1533,1469,1834,1597,2234,1284)
+
+datos<-cbind(x,y,z,w)
+
+media<-apply(datos,2,mean)
+var<-var(datos)
+
+distancias2<-mahalanobis(datos,media,var)
+
+d2<-sort(distancias2)
+
+y<-c(rep(0,nrow(datos)))
+for(j in 1:nrow(datos)){
+y[j]<-(j-0.5)/nrow(datos)
+}
+
+q<-qchisq(y,4)
+
+#plot(d2,q)
+
+par(pty="s")
+plot(q,d2,pch=20,xlim=c(0,12),ylim=c(0,20),xlab="",ylab="",frame=F)
+Arrows(0,0,12,0,lwd=1, arr.type="triangle",lty=2)
+Arrows(0,0,0,20,lwd=1, arr.type="triangle",lty=2)
+mtext("d(j)^2", side=3, at=0 , adj = 0, cex = 0.8)
+mtext("q(c,4)", side=4, at=0, las=2, adj = 0, cex = 0.8)
+```
+
+Se observa que los puntos no caen en una línea recta de pendiente 1. Por lo que se rechaza la hipótesis de normalidad 4-variada para estos datos, aunque $n$-es pequeño.
+
+```{r, echo=FALSE,results="asis",comment=FALSE,message=FALSE}
+library(MVN)
+library(magrittr)
+
+resul <- mvn(datos, mvnTest=c("mardia"), univariateTest=c("SW"))
+
+resul2 <- mvn(datos, mvnTest=c("hz"), univariateTest=c("AD"),
+              univariatePlot = "box",multivariatePlot = "qq")
+
+resul$multivariateNormality %>% 
+knitr::kable(booktabs = TRUE,caption="Salidas Básicas de PH-NM") %>%
+kableExtra::kable_styling(full_width = FALSE)
+
+resul2$multivariateNormality %>% 
+knitr::kable(booktabs = TRUE,caption="Salidas Básicas de PH-NM") %>%
+kableExtra::kable_styling(full_width = FALSE)
+
+resul$univariateNormality  %>% 
+knitr::kable(booktabs = TRUE,caption="Salidas Básicas de PH-NU") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+## Detección de Observaciones Atípicas
+
+La mayoría de los conjuntos de datos contienen unas pocas
+observaciones inusuales que no parecen pertenecer al patrón de
+variabilidad seguido por las otras observaciones.
+
+Estas observaciones son denominadas observaciones atípicas y antes de proceder a identificarlas se debe enfatizar que no todas las observaciones atípicas son números equivocados. Ellas pueden formar parte del grupo y pueden conducir a comprender mejor el fenómeno que se está estudiando.
+
+La detección de observaciones atípicas puede ser mejor
+realizada visualmente, es decir por medio de gráficos.
+
+Para el caso de una variable, se pueden usar gráficos de puntos para muestras pequeñas y gráficos de cajas para muestras grandes.
+
+Para el caso de dos variables analicemos el siguiente gráfico:
+
+```{r echo=F,  grafico-ejemplo-obs-atipicas, fig.cap='Gráfico de Dispersión', fig.show='hold', fig.width=7, fig.asp=.8, out.width='80%' , fig.align='center'}
+x<-c(1889,2403,2119,1645,1976,1712,1943,2104,2400,1745,1710,2046,1840,1867,1859,1954,1325,
+1419,1828,1725,2276,1899,1633,2061,1856,1727,2168,1655,2326,1490)
+#x1<-sort(x)
+y<-c(1651,2048,1700,1627,1916,1712,1685,1820,2100,1600,1591,1907,1841,1685,1649,2349,1170,
+1371,1634,1594,1389,1614,1513,1867,1493,1412,1896,1675,2101,1382)
+#x2<-sort(y)
+par(pty="s")
+plot(x,y,pch=20,xlab="",ylab="",frame=F,axes=F)
+axis(side=1,c(min(x),max(x)), labels=FALSE)
+axis(side=2,c(min(y),max(y)), labels=FALSE)
+
+mtext(c(1300,2500), side=1, las=1, at=c(1300,2400), line=0.8, col="black", cex=0.9)
+mtext(c(1100,2400), side=2, las=1, at=c(1300,2400), line=0.8, col="black", cex=0.9)
+
+text(1955,2350, "O", col="black", cex=1.2)
+text(2277,1390, "O", col="black", cex=1.2)
+```
+
+Para el caso bivariado el diagrama de dispersión proporciona la información visual requerida para detectar datos atípicos. Sin embargo, en altas dimensiones, los datos atípicos pueden no ser detectados por gráficos uni-variados o aún diagramas de dispersión.
+
+En estos casos se recomienda usar algunos tipos de gráficos para datos multivariados como los son: las curvas de Andrews, las gráficas de caras de Chernoff y gráficos de estrellas, etc. (Consultar sección 1.4 de   [@johnson2007applied]). Estos gráficos son muy potentes para detectar casos atípicos multivariados.
+
+Además, en altas dimensiones un valor grande de las distancias:
+$$
+d_i^2=(\underline{\mathbf{x}}_i -\underline{\overline{\mathbf{x}}})^tS^{-1}(\underline{\mathbf{x}}_i -\underline{\overline{\mathbf{x}}})\ ,\ \text{para} \ \ i=1,2,\ldots, n,
+$$
+sugieren que la observación $\underline{\mathbf{x}}_i$ es inusual, aunque no la hallamos visualizado gráficamente.
+
+**Resumen:**
+
+Para detectar observaciones extremas o Outliers en datos multivariados se sugieren los siguientes pasos:
+
+1. Hacer gráficos de puntos para cada variable.
+
+2. Hacer gráficos de dispersión para cada par de variables.
+
+3. Calcular los valores estandarizados de cada variable dados por: 
+$$
+z_{ij}=\frac{(x_{ij}-\overline{x}_j)}{\sqrt{s_{jj}}}\ , \ \text{para}\ \ i=1,2,\ldots,n \ \ \text{y} \ \ j=1,2,\ldots,p.
+$$
+Examinar aquellos valores estandarizados muy grandes o muy pequeños.
+
+4. Calcular las distancias cuadradas generalizadas:
+
+$$
+d_i^2=(\underline{\mathbf{x}}_i -\underline{\overline{\mathbf{x}}})^tS^{-1}(\underline{\mathbf{x}}_i -\underline{\overline{\mathbf{x}}})\ ,\ \text{para} \ \ i=1,2,\ldots, n.
+$$
+Examinar aquellas distancias de valores muy grandes. En el gráfico chi-cuadrado, son aquellos puntos más alejados del origen. 
+
+
+##  Transformaciones para Acercar a la Normalidad Multivariada
+
+Cuando la normalidad no es un supuesto viable, en algunos casos se pueden hacer transformaciones de los datos para acercarlos a la normalidad.
+
+Las transformaciones son solamente reexpresiones de los datos en diferentes unidades. Por ejemplo, cuando un histograma de observaciones positivas muestra una gran cola derecha, una transformación de ellos tomando el logaritmo o la raíz cuadrada generalmente mejora la simetría con respecto a la
+media y aproxima la distribución a la normalidad.
+
+Los tipo de transformaciones a realizar, pueden ser sugeridos por las características de los mismos datos o por consideraciones teóricas. 
+
+En el caso de transformaciones  sugeridas por los mismos datos, se tiene por ejemplo que, los datos de conteos pueden ser más normales si se les toma la raíz cuadrada. Similarmente, para datos de proporciones la transformación logit y para datos de correlación la transformación de Fisher.
+
+**Resumen:**
+
+| Escala Original  | Escala Transformada                                                          | 
+|:------------------------|:----------------------------------------------------------------------|
+| Conteos, $y$           | $\sqrt{y}$                                                             |
+| Proporciones $\hat{p}$ | $Logit(\hat{p})=\frac{1}{2}Log\left(\frac{\hat{p}}{1-\hat{p}} \right)$ |
+| Correlaciones, $r$     | Fisher: $z(r)=\frac{1}{2}Log\left(\frac{1+r}{1-r} \right)$             |
+
+
+En el caso de consideraciones teóricas, una familia de transformaciones para este propósito es la familia de transformaciones de potencias. Existe un método analítico conveniente para escoger una transformación de potencia dentro de dicha familia.
+
+### Familia de Transformaciones de Potencia de Box y Cox (1964)
+
+La transfromada de Box y Cox, ver. [@box1964], se define como sigue.
+$$
+x^{\lambda}=\begin{cases}
+\frac{x^{\lambda}-1}{\lambda} \ , \ \ \text{para} \ \ \lambda \neq 0 \\
+\text{Ln}x  \ , \ \ \text{para} \ \ \lambda = 0 
+\end{cases}
+$$
+La cual es continua en $\lambda$, para $x>0$.
+
+Dadas las observaciones $x_1, x_2, \ldots, x_n$, la solución de Box y
+Cox para escoger el valor adecuado de $\lambda$, es aquel que maximiza la expresión:
+$$
+l(\lambda)=-\frac{n}{2}\text{Ln} \left[\frac{1}{n} \sum_{i=1}^n\left( x_i^{(\lambda)} - \overline{x^{(\lambda)}} \right)^2 \right]+(\lambda-1)\sum_{i=1}^n\text{Ln}\ x_i
+$$
+donde:
+$$
+\overline{x^{(\lambda)}}=\frac{1}{n}\sum_{i=1}^n x_i^{(\lambda)}=\frac{1}{n}\sum_{i=1}^n \left(\frac{x_i^{(\lambda)}-1}{\lambda} \right),
+$$
+es la media aritmética de las observaciones transformadas.
+
+El proceso de maximización de $l(\lambda)$ es fácil de realizar por medio de un computador, seleccionando muchos valores diferentes para $\lambda$ y calculando el respectivo valor de $l(\lambda)$.
+
+Es útil hacer un gráfico de $l(\lambda)$  versus $\lambda$ para estudiar el comportamiento en el valor del máximo $\hat{\lambda}$.
+
+Algunos autores, recomiendan un procedimiento equivalente 
+para encontrar $\lambda$, creando una nueva variable definida por:
+$$
+y_i^{(\lambda)}=\frac{x_i^{\lambda}-1}{\lambda \left[ \left( \overset{n}{\underset{i=1}{ \prod}} x_i \right)^{1/n} \right]^{\lambda-1}}\ , \ \ i=1,2,\ldots,n
+$$
+y calculando su varianza muestral. 
+
+El mínimo de la varianza ocurre en el mismo valor $\lambda$ que maximiza $l(\lambda)$.
+
+**Ejemplo:**
+Para un ejemplo visto anteriormente de $n=42$ datos de la radiación de hornos de micro-ondas con la tapa  cerrada, el gráfico $qq-plot$ indica que las observaciones se desvían de lo que esperaríamos si fueran normalmente distribuidas. 
+
+Puesto que todas las observaciones son positivas, se
+puede utilizar una transformación de potencia de los datos con la esperanza de acercarlos a la normalidad.
+
+Los pares $(\lambda, l(\lambda) )$, para este proceso de búsqueda se encuentran en la siguiente tabla, al igual que el gráfico de $l(\lambda)$ contra $\lambda$, donde observamos que el máximo 
+se alcanza en $\hat{\lambda} =0.28$, pero por conveniencia elegimos a $\hat{\lambda} =1/4=0.25$.
+
+
+```{r echo=FALSE}
+Obs <- seq(1:26)      
+landa<-c(seq(-1,1.5,by=0.1))
+llanda<-c(70.52,75.62,80.46,84.94,89.06,92.79,96.10,98.97,101.39,103.35,104.83,105.84,106.39,106.51,106.20,105.5,104.43,103.03,101.33,99.34,97.10,94.64,91.96,89.10,86.07,82.88)
+datos <- cbind(Obs,landa,llanda)
+
+datos <- rbind(datos[1:13,],datos[14:26,])
+
+datos %>% 
+knitr::kable(booktabs = TRUE,caption="Datos de l(lambda)") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+
+```{r echo=F,  grafico-ejemplo-hallar-lamda, fig.cap='Gráfico de l(lambda)', fig.show='hold', fig.width=7, fig.asp=.8, out.width='80%' , fig.align='center'}
+landa<-c(seq(-1,1.5,by=0.1))
+llanda<-c(70.52,75.62,80.46,84.94,89.06,92.79,96.10,98.97,101.39,103.35,104.83,105.84,106.39,
+106.51,106.20,105.5,104.43,103.03,101.33,99.34,97.10,94.64,91.96,89.10,86.07,82.88)
+
+par(pty="s")
+plot(landa,llanda,type="l",frame=F,axes=F,xlab="",ylab="")
+abline(v=0.30,lty=2)
+abline(h=106.51,lty=2)
+Arrows(-1,70,1.5,70,lwd=1, arr.type="triangle",lty=1)
+Arrows(-1,70,-1,110,lwd=1, arr.type="triangle",lty=1)
+mtext(expression(l(lambda)), side=3, at=-1 , adj = 0, cex = 0.8)
+mtext(expression(lambda), side=4, at=70, las=2, adj = 0, cex = 0.8)
+mtext(106.51, side=2, las=1,at=106.51, line=0.8, col="black", cex=0.9)
+mtext(c(-1,0.3,1.5), side=1, las=1,at=c(-1,0.3,1.5), line=0.8, col="black", cex=0.9)
+```
+
+Luego, los datos son transformados como:
+$$
+ x_i^{(1/4)}=
+\frac{x_i^{(1/4)}-1}{1/4} \ , \ \text{para} \ i=1,2,\ldots,42. 
+$$
+Para verificar si los datos transformados están más cerca a la normal, se presenta su gráfico $qq-plot$:
+
+```{r echo=F, qq-plot-datos-transf, fig.cap='Gráfico QQ-Plot Datos Transformados', fig.show='hold', fig.width=7, fig.asp=.8,  out.width="600px", fig.align='center'}
+x<-c(0.15,0.09,0.18,0.10,0.05,0.12,0.08,0.05,0.08,0.10,0.07,0.02,0.01,0.10,
+0.10,0.10,0.02,0.10,0.01,0.40,0.10,0.05,0.03,0.05,0.15,0.10,0.15,0.09,0.08,0.18,
+0.10,0.20,0.11,0.30,0.02,0.20,0.20,0.30,0.30,0.40,0.30,0.05)
+
+x1<-(x^{0.3}-1)/(0.3)
+x2<-sort(x1)
+
+x2<-c(-2.49603791, -2.49603792, -2.30250171, -2.30250172, -2.30250173, -2.1691668,
+-1.97636491, -1.97636492, -1.97636493, -1.97636494, -1.97636495, -1.8322384,
+-1.77088471, -1.77088472, -1.77088473, -1.71468881, -1.71468882, -1.66270921,
+-1.66270922, -1.66270923, -1.66270924, -1.66270925, -1.66270926, -1.66270927,
+-1.66270928, -1.66270929, -1.6142515, -1.5687868, -1.44661911, -1.44661912,
+-1.44661913, -1.34054811, -1.34054812, -1.27655381, -1.27655382, -1.27655383,
+-1.01051571, -1.01051572, -1.01051573, -1.01051574, -0.80114071, -0.80114072)
+
+y<-c(rep(0,length(x1)))
+for(j in 1:length(x1)){
+y[j]<-(j-0.5)/length(x1)
+}
+
+q<-qnorm(y)
+q1<-c(mean(q[1:2]),mean(q[3:5]),q[6],mean(q[7:11]),q[12],mean(q[13:15]),
+mean(q[16:17]),mean(q[18:26]),q[27],q[28],mean(q[29:31]),mean(q[32:33]),
+mean(q[34:36]),mean(q[37:40]),mean(q[41:42]))
+#library(shape)
+x2<-c(-2.49603791, -2.30250171, -2.1691668, -1.97636495, -1.8322384,
+-1.77088471, -1.71468881, -1.66270921, -1.6142515, -1.5687868, -1.44661911,
+-1.34054811, -1.27655381, -1.01051571, -0.80114071)
+
+par(pty="s")
+plot(q1,x2,pch=20,xlim=c(-2,3),ylim=c(-3,-0.5),xlab="",ylab="",frame=F)
+
+Arrows(-2,-3,3,-3,lwd=1, arr.type="triangle",lty=2)
+Arrows(-2,-3,-2,-0.5,lwd=1, arr.type="triangle",lty=2)
+
+mtext(expression(X(j)^{1/4}), side=3, at=-2 , adj = 0, cex = 0.8)
+mtext(expression(q(j)), side=4, at=-3, las=2, adj = 0, cex = 0.8)
+
+abline(-1.67,0.45,lty=2,lwd=1)
+
+text(mean(q[1:2]),-2.49603791, "O", col="black", cex=1.2)
+text(mean(q[1:2]),-2.39603791, "2", col="black", cex=0.7)
+
+text(mean(q[3:5]),-2.30250171, "O", col="black", cex=1.2)
+text(mean(q[3:5]),-2.20250171, "3", col="black", cex=0.7)
+
+text(mean(q[7:11]),-1.97636495, "O", col="black", cex=1.2)
+text(mean(q[7:11]),-1.87636495, "5", col="black", cex=0.7)
+
+text(mean(q[13:15]),-1.77088471, "O", col="black", cex=1.2)
+text(mean(q[13:15]),-1.67088471, "3", col="black", cex=0.7)
+
+text(mean(q[16:17]),-1.71468881, "O", col="black", cex=1.2)
+text(mean(q[16:17]),-1.61468881, "2", col="black", cex=0.7)
+
+text(mean(q[18:26]),-1.66270921, "O", col="black", cex=1.2)
+text(mean(q[18:26]),-1.56270921, "9", col="black", cex=0.7)
+
+text(mean(q[29:31]),-1.44661911, "O", col="black", cex=1.2)
+text(mean(q[29:31]),-1.34661911, "3", col="black", cex=0.7)
+
+text(mean(q[32:33]),-1.34054811, "O", col="black", cex=1.2)
+text(mean(q[32:33]),-1.24054811, "2", col="black", cex=0.7)
+
+text(mean(q[34:36]),-1.27655381, "O", col="black", cex=1.2)
+text(mean(q[34:36]),-1.17655381, "3", col="black", cex=0.7)
+
+text(mean(q[37:40]),-1.01051571, "O", col="black", cex=1.2)
+text(mean(q[37:40]),-1.01051571+0.1, "4", col="black", cex=0.7)
+
+text(mean(q[41:42]),-0.80114071, "O", col="black", cex=1.2)
+text(mean(q[41:42]),-0.70114071, "2", col="black", cex=0.7)
+```
+
+Los pares de cuantiles caen muy cerca de una recta, lo que
+permite concluir que los datos: $x_i^{(1/4)}$ son aproximadamente normal.
+
+El $qq$-plot para los datos NO-transformados era:
+
+```{r echo=F, qq-plot-datos-no-transf, fig.cap='Gráfico QQ-Plot Datos No-Transformados', fig.show='hold', fig.width=7, fig.asp=.8,  out.width="600px",  fig.align='center'}
+x1<-c(0.151,0.091,0.181,0.10111111111,0.051,0.12,0.081,0.0511,0.0811,0.101,
+0.07,0.021,0.01,0.1011,0.10111,0.101111,0.021,0.1011111,0.011,0.401,0.10111111,0.05111,0.03,0.051111,
+0.1511,0.101111111,0.15111,0.0911,0.08111,0.1811,0.1011111111,0.211,0.11,0.301,0.02111,0.2011,0.20111,0.3011,0.30111,0.4011,0.301111,0.0511111)
+
+x1<-sort(x1)
+
+y<-c(rep(0,length(x1)))
+for(j in 1:length(x1)){
+y[j]<-(j-0.5)/length(x1)
+}
+
+q<-qnorm(y)
+q1<-c(mean(q[1:2]),mean(q[3:5]),q[6],mean(q[7:11]),q[12],mean(q[13:15]),
+mean(q[16:17]),mean(q[18:26]),q[27],q[28],mean(q[29:31]),mean(q[32:33]),
+mean(q[34:36]),mean(q[37:40]),mean(q[41:42]))
+
+#library(shape)
+x<-c(0.01,0.02,0.03,0.05,0.07,0.08,0.09,0.10,0.11,0.12,0.15,0.18,0.20,0.30,0.40)
+
+par(pty="s")
+plot(q1,x,pch=20,xlim=c(-2,3),ylim=c(0,0.45),xlab="",ylab="",frame=F)
+Arrows(-2,0,3,0,lwd=1, arr.type="triangle",lty=2)
+Arrows(-2,0,-2,0.45,lwd=1, arr.type="triangle",lty=2)
+
+mtext("X(j)", side=3, at=-2 , adj = 0, cex = 0.8)
+mtext("q(j)", side=4, at=0, las=2, adj = 0, cex = 0.8)
+
+text(mean(q[1:2]),0.0100000, "O", col="black", cex=1.2)
+text(mean(q[1:2]),0.0100000+0.015, "2", col="black", cex=0.7)
+
+text(mean(q[3:5]),0.0210000, "O", col="black", cex=1.2)
+text(mean(q[3:5]),0.0210000+0.015, "3", col="black", cex=0.7)
+
+text(mean(q[7:11]),0.0510000, "O", col="black", cex=1.2)
+text(mean(q[7:11]),0.0510000+0.015, "5", col="black", cex=0.7)
+
+text(mean(q[13:15]),0.0810000, "O", col="black", cex=1.2)
+text(mean(q[13:15]),0.0810000+0.015, "3", col="black", cex=0.7)
+
+text(mean(q[16:17]),0.0910000, "O", col="black", cex=1.2)
+text(mean(q[16:17]),0.0910000+0.015, "2", col="black", cex=0.7)
+
+text(mean(q[18:26]),0.1011110, "O", col="black", cex=1.2)
+text(mean(q[18:26]),0.1011110+0.015, "9", col="black", cex=0.7)
+
+text(mean(q[29:31]),0.1510000, "O", col="black", cex=1.2)
+text(mean(q[29:31]),0.1510000+0.015, "3", col="black", cex=0.7)
+
+text(mean(q[32:33]),0.1810000, "O", col="black", cex=1.2)
+text(mean(q[32:33]),0.1810000+0.015, "2", col="black", cex=0.7)
+
+text(mean(q[34:36]),0.2011000, "O", col="black", cex=1.2)
+text(mean(q[34:36]),0.2011000+0.015, "3", col="black", cex=0.7)
+
+text(mean(q[37:40]),0.3010000, "O", col="black", cex=1.2)
+text(mean(q[37:40]),0.3010000+0.015, "4", col="black", cex=0.7)
+
+text(mean(q[41:42]),0.4010000, "O", col="black", cex=1.2)
+text(mean(q[41:42]),0.4010000+0.015, "2", col="black", cex=0.7)
+```
+
+
+### Transformaciones para el Caso Multivariado:
+
+Para las observaciones multivariadas se debe seleccionar una
+transformación para cada una de las variables. Sea $\lambda_1,\lambda_2,\ldots,\lambda_p$ las transformaciones de potencia para las $p$  variables consideradas.
+
+Las transformaciones pueden ser obtenidas:
+
+Individualmente Para cada una de las variables se escoge la
+transformación usando el procedimiento anterior. La $i$-ésima
+observación transformada es:
+$$
+\underline{x_{i}}^{(\hat{\lambda})}=\begin{bmatrix}
+\frac{x_{i1}^{(\hat{\lambda}_1)}-1}{\hat{\lambda}_1}\\ \\
+\frac{x_{i2}^{(\hat{\lambda}_2)}-1}{\hat{\lambda}_2}\\ 
+\vdots \\ 
+\frac{x_{ip}^{(\hat{\lambda}_p)}-1}{\hat{\lambda}_p}
+\end{bmatrix}_{p\times 1}
+$$
+donde $\hat{\lambda}_1,\hat{\lambda}_2,\ldots,\hat{\lambda}_p$ son los valores que individualmente maximizan a $l(\lambda_j)$, para $j=1,2\ldots,p$.
+
+El anterior procedimiento es equivalente a hacer cada distribución marginal aproximadamente normal. Aunque la normalidad marginal de cada componente no es suficiente para garantizar que la distribución conjunta sea normal multivariada, frecuentemente esta condición es suficiente.
+
+```{r}
+x<-c(1889,2403,2119,1645,1976,1712,1943,2104,2983,1745,1710,2046,1840,1867,1859,1954,1325,
+1419,1828,1725,2276,1899,1633,2061,1856,1727,2168,1655,2326,1490)
+
+y<-c(1651,2048,1700,1627,1916,1712,1685,1820,2794,1600,1591,1907,1841,1685,1649,2149,1170,
+1371,1634,1594,2189,1614,1513,1867,1493,1412,1896,1675,2301,1382)
+
+z<-c(1561,2087,1815,1110,1614,1439,1271,1717,2412,1384,1518,1627,1595,1493,1389,1180,1002,
+1252,1602,1313,1547,1422,1290,1646,1356,1238,1701,1414,2065,1214)
+
+w<-c(1778,2197,2222,1533,1883,1546,1671,1874,2581,1508,1667,1898,1741,1678,1714,1281,1176,
+1308,1755,1646,2111,1477,1516,2037,1533,1469,1834,1597,2234,1284)
+
+datos<-cbind(x,y,z,w)
+
+library(car)
+
+landa1 <- powerTransform(datos[,1])
+landa2 <- powerTransform(datos[,2])
+landa3 <- powerTransform(datos[,3])
+landa4 <- powerTransform(datos[,4])
+
+#names(lambda1)
+#landa1$lambda
+
+datos_new <- basicPower(datos[,1], landa2$lambda)
+
+shapiro.test(datos[,2])
+shapiro.test(datos_new)
+
+#transf <- powerTransform(datos,family = "bcnPower")
+transf <- powerTransform(datos,family = "bcPower")
+
+#names(transf)
+#transf$lambda
+#transf$lambda[1]
+
+coef(transf, round=FALSE)
+summary(transf)
+
+datos_new <- basicPower(datos, c(transf$lambda[1],transf$lambda[2],transf$lambda[3],transf$lambda[4]))
+
+#datos_new
+```
+
+
+```{r}
+library(MVN)
+resul <- mvn(datos, mvnTest=c("hz"), univariateTest=c("SW"), bc=TRUE,bcType = "optimal",multivariatePlot = "qq",univariatePlot = "box")
+resul
+```
+
+
+```{r}
+resul <- mvn(datos_new, mvnTest=c("hz"), univariateTest=c("SW"), bc=TRUE,bcType = "optimal",multivariatePlot = "qq",univariatePlot = "box")
+resul
+```
+
+
+## Muestra Aleatoria Normal $p$-Variada
+
+Sea una muestra aleatoria normal $p$-variada de tamaño $n$, $(\underline{\mathbf{x}}_1,\underline{\mathbf{x}}_2,\ldots,\underline{\mathbf{x}}_n)$ con vector de medias $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y matriz de var-cov $\mathbf{\Sigma}$, es decir, 
+$$
+\mathbf{X}_{n\times p}=\begin{bmatrix} x_{11} & x_{12} & \cdots & x_{1p}\\ x_{21} & x_{22} & \cdots & x_{2p}\\ \vdots & \vdots & & \vdots \\ x_{n1} & x_{n2} & \cdots & x_{np} \end{bmatrix}=\begin{bmatrix} \underline{\mathbf{x}}_1 \\ \underline{\mathbf{x}}_2 \\ \vdots \\ \underline{\mathbf{x}}_n \end{bmatrix}
+$$
+Se tienen $n$-vectores $\underline{\mathbf{x}}_i$ para $i=1,2,\cdots,n$ en $\mathbb{R}^p$ con media dada por: $E[\underline{\mathbf{x}}_i]=\boldsymbol{\underline{\boldsymbol{\mu}}}_{p\times 1}$ y matriz de var-cov dada por: $Var[\underline{\mathbf{x}}_i]=\mathbf{\Sigma}_{p\times p}$
+
+### Estimadores de Máx-Ver de una Normal-Multivariada
+
+Muchos procesos estadísticos emplean los valores de los parámetros poblacionales que mejor expliquen los datos observados, en donde **mejor**, se refiere a elegir valores de $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y $\boldsymbol{\Sigma}$ que maximicen la f.d.p conjunta evaluada en los datos observados.
+
+A la técnica de hallar estos parámetros poblacionales que maximizan la f.d.p conjunta para datos observados fijos, se le conoce con el nombre de: **Estimación de Máxima Verosimilitud** y a los parámetros estimados mediante esta técnica se les llaman **Estimadores de Máxima Verosimilitud** (MLE) o de **Máxima Probabilidad**. 
+
+A continuación se hallarán los MLE de los parámetros poblacionales $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y $\mathbf{\Sigma}$ de una población Normal-Multivariada, para un conjunto de datos u observaciones fijas  $p$-variadas, $\underline{\mathbf{x}}_1,\underline{\mathbf{x}}_2,\ldots,\underline{\mathbf{x}}_n$.
+
+#### La f.d.p Conjunta Multivariada
+
+Como las $\underline{\mathbf{x}}_i$ para $i=1,2,\ldots,n$, son mutuamente independientes y cada uno tiene una distribución normal $p$-variada, es decir $\underline{\mathbf{x}}_i \sim N_p(\boldsymbol{\underline{\boldsymbol{\mu}}}\ , \ \mathbf{\Sigma})$, entonces la f.d.p conjunta de las $n$-observaciones $p$-variadas es el producto de las densidades normales ($p$-variadas) marginales, es decir:
+\begin{align*}
+f(\underline{\mathbf{x}}_1,\underline{\mathbf{x}}_2,\ldots,\underline{\mathbf{x}}_n \ ; \ \boldsymbol{\underline{\boldsymbol{\mu}}}\ , \ \mathbf{\Sigma}  )&=\prod_{i=1}^nf(\underline{\mathbf{x}}_i)\\ \\
+&=\prod_{i=1}^n \left\{\frac{1}{(2\pi)^{p/2}}\frac{1}{|\mathbf{\Sigma}|^{1/2}} e^{ -\frac{1}{2}(\underline{\mathbf{x}}_i-\boldsymbol{\underline{\boldsymbol{\mu}}})^{'}\mathbf{\Sigma}^{-1}(\underline{\mathbf{x}}_i-\boldsymbol{\underline{\boldsymbol{\mu}}}) } \right\}  \\ \\ 
+&= \frac{1}{(2\pi)^{np/2}}\frac{1}{|\mathbf{\Sigma}|^{n/2}} e^{ -\frac{1}{2}\sum_{i=1}^n(\underline{\mathbf{x}}_i-\boldsymbol{\underline{\boldsymbol{\mu}}})^{'}\mathbf{\Sigma}^{-1} (\underline{\mathbf{x}}_i-\boldsymbol{\underline{\boldsymbol{\mu}}}) }
+\end{align*}
+
+#### Función de Verosimilitud Multivariada
+
+Para valores conocidos de las observaciones:
+$(\underline{\mathbf{x}}_1=\underline{x}_1,\underline{ \mathbf{x}}_2=\underline{x}_2,\ldots,\underline{ \mathbf{x}}_n=\underline{x}_n)$, la f.d.p conjunta anterior, se convierte en una función de parámetros $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y $\mathbf{\Sigma}$, la cual se llama:  **Función de Verosimilitud** y se denota por $L(\boldsymbol{ \underline{\boldsymbol{\mu}}}\ , \ \mathbf{\Sigma})$, ie: 
+\begin{align*}
+& L(\boldsymbol{\underline{\boldsymbol{\mu}}}\ , \ \mathbf{\Sigma} |\underline{x}_1,\underline{x}_1,,\ldots,\underline{x}_n)
+\\ & \\ & =  \frac{1}{(2\pi)^{np/2}}\frac{1}{|\mathbf{\Sigma}|^{n/2}} e^{ -\frac{1}{2}\sum_{i=1}^n(\underline{x}_i-\boldsymbol{\underline{\boldsymbol{\mu}}})^{'}\mathbf{\Sigma}^{-1} (\underline{x}_i-\boldsymbol{\underline{\boldsymbol{\mu}}}) }\\ & \\
+&=L(\boldsymbol{\underline{\boldsymbol{\mu}}}\ , \ \mathbf{\Sigma})
+\end{align*}
+
+**Teorema:**
+Sea $(\underline{\mathbf{x}}_1,\underline{\mathbf{x}}_2,\ldots,\underline{\mathbf{x}}_n)$ una muestra aleatoria de una población normal $p$-variada con vector de medias $\boldsymbol{\underline{ \mu}}$ y matriz de var-cov $\mathbf{\Sigma}$, entonces  
+
+los estimadores de máxima-verosimilitud de $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y $\mathbf{\Sigma}$ están dados por:
+$$
+\hat{\boldsymbol{\underline{\boldsymbol{\mu}}}}=\overline{\underline{\mathbf{x}}}=\begin{bmatrix} \overline{X}_1 \\ \overline{X}_2 \\ \vdots \\ \overline{X}_p \end{bmatrix} = \frac{1}{n}\mathbf{X}^T\mathbf{1}=\frac{1}{n}\begin{bmatrix} \sum_{i=1}^n x_{i1}\\ \sum_{i=1}^n x_{i2}\\ \vdots  \\ \sum_{i=1}^n x_{ip} \end{bmatrix}_{p\times 1}=\frac{1}{n}\sum_{i=1}^n \underline{\mathbf{x}}_i\ \ \ \text{y}\ \ \ 
+$$
+$$
+\hat{\mathbf{\Sigma}}=\mathbf{S}_n=\frac{1}{n}\sum_{i=1}^n (\underline{\mathbf{x}}_i-\underline{\overline{\mathbf{x}}})(\underline{\mathbf{x}}_i-\underline{\overline{\mathbf{x}}})^{'}=\left( \frac{n-1}{n}\right) \mathbf{S}
+$$
+
+Los valores observados: 
+$$
+\overline{\underline{\mathbf{x}}}_{p\times 1}= \frac{1}{n}\sum_{i=1}^n \underline{x}_i\ \ \text{y} \ \ \  \mathbf{S}_n=\frac{1}{n}\sum_{i=1}^n (\underline{x}_i-\underline{\overline{\mathbf{x}}})(\underline{x}_i-\underline{\overline{\mathbf{x}}})^{'}=\frac{\mathbf{B}}{n},
+$$ 
+son las estimaciones de máxima-verosimilitud de $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y   $\mathbf{\Sigma}$ respectivamente. 
+
+**En resumen**, los estimadores MLE de $\boldsymbol{\underline{\boldsymbol{\mu}}}$ y $\mathbf{\Sigma}$ son: el vector de medias muestrales $\hat{\boldsymbol{\underline{\boldsymbol{\mu}}}}=\underline{\overline{\mathbf{x}}}$ y la matriz de var-cov muestral $\hat{\mathbf{\Sigma}}=\mathbf{S}_n=\frac{1}{n}\sum_{i=1}^{n} (\underline{x}_i-\underline{\overline{\mathbf{x}}})(\underline{x}_i-\underline{\overline{\mathbf{x}}})^{'}=\left( \frac{n-1}{n}\right) \mathbf{S}$
+
+**Observaciones finales:**
+
+**Notar que:**
+
+El vector de medias muestrales $\hat{\boldsymbol{\underline{\boldsymbol{\mu}}}}=\underline{\overline{\mathbf{x}}}$: es un vector aleatorio y la matriz de var-cov muestrales $\hat{\mathbf{\Sigma}}=\mathbf{S}_n=\frac{1}{n}\sum_{i=1}^{n} (\underline{\mathbf{x}}_i-\underline{\overline{\mathbf{x}}})(\underline{\mathbf{x}}_i-\underline{\overline{\mathbf{x}}})^{'}$: también es una matriz aleatoria, ya que sus valores cambian de muestra a muestra.
+
+Las estimaciones de máx-verosimilitud son sus respectivos valores particulares obtenidos para el conjunto particular de datos u observaciones dadas.
+
+**Relación del Máximo con la VG:**
+
+Ahora Como, 
+$$
+\frac{1}{|\mathbf{\Sigma}|^{b}}  
+e^{-\frac{1}{2} \text{tr}\left(   \mathbf{\Sigma}^{-1} \mathbf{B} \right)} \leq \frac{1}{|\mathbf{B}|^{b}} (2b)^{(pb)} 
+e^{-bp}
+$$
+  
+El valor máximo de la función de verosimilitud 
+$L(\boldsymbol{\underline{\boldsymbol{\mu}}}\ , \ \mathbf{\Sigma})$ es:
+
+\begin{align*}
+L(\hat{\boldsymbol{\underline{\boldsymbol{\mu}}}}\ , \ \hat{\mathbf{\Sigma}}) & \ = \frac{1}{(2\pi)^{np/2}} \frac{1}{|2b\hat{\mathbf{\Sigma}}|^{n/2}} (2b)^{np/2}  e^{ -\frac{np}{2} }\\ \\ 
+& \frac{1}{(2\pi)^{np/2}} \frac{1}{(2b)^{np/2}} (2b)^{np/2}  \frac{1}{|\hat{\mathbf{\Sigma}}|^{n/2}}  e^{ -\frac{np}{2} }\\ \\ 
+& \frac{1}{(2\pi)^{np/2}} \frac{1}{\bigl|\hat{\mathbf{\Sigma}}\bigr|^{n/2}}  e^{ -\frac{np}{2} }\\ \\ 
+& \frac{1}{(2\pi)^{np/2}} \frac{1}{\biggl|\left(\frac{n-1}{n} \right) \mathbf{S}\biggr|^{n/2}}  e^{ -\frac{np}{2} }\\ \\ 
+&   =\underbrace{\frac{1}{(2\pi)^{np/2}}  e^{ -\frac{np}{2} } \left(\frac{n-1}{n} \right)^{-\frac{np}{2}} }|\mathbf{S}|^{-\frac{n}{2}} \\ \\ 
+& = \text{k}  |\mathbf{S}|^{-\frac{n}{2}}= \text{k} (\text{Varianza Generalizada})^{-\frac{n}{2}}\\ \\ L(\hat{\boldsymbol{\underline{\boldsymbol{\mu}}}}\ , \ \hat{\mathbf{\Sigma}})  &= \frac{\text{k}}{(\text{Varianza Generalizada})^{\frac{n}{2}}}
+\end{align*}
+
+De acuerdo a lo anterior, la Varianza-Generalizada determina lo "\ impinada" \ o "no-impinada" que es la función de verosimilitud, por lo que es una **Medida-Natural de Variabilidad de los Datos** cuando la población es normal multivariada. 
+
+Entre *más grande sea la VG mas achatada es la superficie* ie. existe más variabilidad o dispersión en los datos involucradas y *entre mas pequeña sea la VG mas empinada es la superficie* ie. existe menos variabilidad o dispersión en los datos involucrados.
+
+**Ejemplo:**
+Se considera la comparación de las siguientes dos superficies Normales Bivariadas.
+
+```{r echo=F, cache=TRUE, grafica-ejemplo-aspectos-geom-VG, fig.cap='Aspectos Geométricos de la VG', fig.show='hold', fig.width=7, fig.asp=0.4, out.width="600px",  out.asp=0.8, fig.align='center'}
+
+## datos para la primera gráfica
+
+media1 <- c(0, 0)
+sigma1 <- matrix(c(1, 0, 0, 1), ncol=2)
+
+x <- seq(from=-8, to=8, length.out=60)
+y <- seq(from=-8, to=8, length.out=60)
+
+fun1 <- function(x, y) dmvnorm(c(x, y), mean=media1, sigma=sigma1)
+fun1 <- Vectorize(fun1)
+z1 <- outer(x, y, fun1)
+
+## datos para segunda gráfica
+media2 <- c(0, 0)
+sigma2 <- matrix(c(3, 0, 0, 3), ncol=2)
+
+fun2 <- function(x, y) dmvnorm(c(x, y), mean=media2, sigma=sigma2)
+fun2 <- Vectorize(fun2)
+z2 <- outer(x, y, fun2)
+
+par(mfrow=c(1, 2), mar=c(1, 1, 1, 1) )
+persp(x, y, z1, theta=-10, phi=20, expand=0.8, axes=FALSE,box=F)
+persp(x, y, z2, theta=-10, phi=20, expand=0.8, axes=FALSE,box=F)
+```
+
+**Varianza Generalizadas (detrminnates de $\boldsymbol{S}$) y Máximos Obtenidos para cada caso**.
+
+$$
+\mathbf{S}_1=\begin{bmatrix}
+`r sigma1[1,1]` & `r sigma1[1,2]` \\ `r sigma1[2,1]` & `r sigma1[2,2]`
+\end{bmatrix} \ \ \ \ \ \text{y} \ \ \ \ \ \  \mathbf{S}_2=\begin{bmatrix}
+`r sigma2[1,1]` & `r sigma2[1,2]` \\ `r sigma2[2,1]` & `r sigma2[2,2]`
+\end{bmatrix}
+$$
+
+$$
+VG1=|\boldsymbol{S}_1|=`r det(sigma1)` \ \ \ \text{y} \ \ \ 
+VG2=|\boldsymbol{S}_2|=`r det(sigma2)` 
+$$
+
+$$
+L_1(\hat{\underline{\boldsymbol{\mu}}},\hat{\mathbf{\Sigma}})=L(\underline{\overline{\mathbf{x}}}_1,\mathbf{S}_1) = `r max(z1)` \ \ \ \text{y} \ \ \ 
+L_2(\hat{\underline{\boldsymbol{\mu}}},\hat{\mathbf{\Sigma}})=L(\underline{\overline{\mathbf{x}}}_2,\mathbf{S}_2) = `r max(z2)`
+$$
+
+**En el caso-1**, se tiene **VG-más pequeña** lo que dice que la superficie es **más impinada** y que hay **menos  variabilidad**.
+
+**En el caso-2**, se tiene **VG-más grande** lo que dice que la superficie es **menos impinada** y que hay **más  
+variabilidad**.
+
+
+
+
+
+
+## Pruebas de Hipótesis
+
+**Ejemplo en R, mediante una función de Usuario:**
+
+````{r}
+datos<-data.frame(x1=c(6,10,8),x2=c(9,6,3) )
+datos
+mu_0<-c(9,5)
+res_mu0<-HT2_mu0(datos,mu_0,0.05)
+kable(res_mu0)
+````
+
+### Resultados Usando Funciones del R
+
+En R existen varias funciones en distintos paquetes o librerias, las cuales se utilizan para realizar este tipo de pruebas de hipóteis. Se recomienda leer muy bien las ayudas que existen sobre estas funciones para utilizarlas de manera adecuada y definir de forma apropiada sus respectivos argumentos.
+
+**Resultados de esta PH utilizando la función `HottellingsT2` del paquete `ICSNP` del R**.
+
+```{r}
+library(ICSNP)
+mu_0<-c(9,5)
+HotellingsT2(datos, mu = mu_0)
+```
+ 
+**Resultados de esta PH Utilizando la función `T2.test` del paquete `rrcov` del R**.
+
+```{r}
+library(rrcov)
+mu_0<-c(9,5)
+T2.test(datos, mu = mu_0)
+```
+
+**Ejemplo en R. Pruebas de Hipótesis para $\underline{\mu}$ n-Grande**
+
+````{r}
+datos1<-read.table("datos/datos6.txt",header=TRUE) 
+datos<-datos1
+rbind(head(datos, n = 5), rep(".", ncol(datos)), rep(".", ncol(datos)), rep(".", ncol(datos)), tail(datos, n = 5) )
+datos$Grupos %<>% factor()
+````
+
+**Estructura de los datos**:
+
+````{r}
+str(datos)
+datos$Grupos %>% unique()
+datos$Grupos %>% table()
+````
+
+**Resultados de la PH usando la función de usuario** `HT2_mu0_ngrande()`
+
+```{r}
+grupo1<- datos %>% dplyr::filter(Grupos==1)
+grupo2<- datos %>% dplyr::filter(Grupos==2)
+grupo3<- datos %>% dplyr::filter(Grupos==3)
+```
+
+Para este se creo una función de usuario llamada: `HT2_mu0_ngrande` la cual se utiliza a continuación.
+
+```{r}
+mu_0<-c(0,0,0)
+res_mu0ngrande<-HT2_mu0_ngrande(grupo1[,1:3], mu_0, 0.05)
+kable(res_mu0ngrande)
+```
+
+**Resultados utilizando la Función `HotellingsT2` del R**
+
+Igualmente, también se puede suar la función `HotellingsT2` del R de la siguiente forma.
+
+
+```{r}
+mu_0<-c(0,0,0)
+HotellingsT2(grupo1[,1:3],mu=mu_0,test="chi")
+```
+
+**Medias para cada Grupo**
+
+````{r}
+source("funcionesR/funciones.R", local = knitr::knit_global())
+
+mu_0<-c(4.5,5,5)
+HotellingsT2(grupo1[,1:3],mu=mu_0,test="chi")
+````
+
+**Con la función de Usuario ``HT2_mu0_ngrande``**
+
+```{r}
+mu_0<-c(4.5,5,5)
+
+res_mu0ngrande<-HT2_mu0_ngrande(grupo1[,1:3], mu_0, 0.05)
+kable(res_mu0ngrande)
+```
+
+
+
+
+
+
