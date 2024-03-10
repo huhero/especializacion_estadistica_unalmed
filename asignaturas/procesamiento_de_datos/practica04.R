@@ -97,6 +97,9 @@ barplot(
 
 bd.master.col <- filter(bd.master, country=="Colombia")
 
+
+group_by(datos,departamento)
+
 bd.master.agg.col <- summarise( group_by(bd.master.col,year),
            sum_suic = sum(suicides_no),
            sum_pobla = sum(population))
