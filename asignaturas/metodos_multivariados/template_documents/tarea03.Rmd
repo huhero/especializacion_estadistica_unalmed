@@ -1,0 +1,348 @@
+---
+fontsize: 12pt # 10pt,11pt
+geometry: margin = 2.5cm 
+documentclass: article
+output: 
+  pdf_document:
+    includes:
+      before_body: portadas/portada_mma.tex
+    toc: TRUE
+    number_sections: yes
+    fig_caption: yes
+metodobib: true
+csl: methods-in-ecology-and-evolution.csl  #formato de citacion
+#cls: apa.csl
+#csl: vancouver.csl
+biblio-style: "apalike"    #estilo de citacion
+#biblio-style: natbib, plainnat, abbrvnat, unsrtnat , apalike
+bibliography: ["bib/library.bib","bib/paquetes.bib","bib/referencias.bib"]
+link-citations: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+````{r setup, include = F}
+library(knitr)
+if(!require(pacman)) install.packages("pacman"); library(pacman)
+pacman::p_load("tidyverse", "knitr", "HH",
+               "magrittr","readr","readxl","Amelia","janitor",
+               "leaps","MASS","clusterGeneration")
+
+knitr::opts_chunk$set(fig.path = 'figurasR/',
+                      echo = FALSE, warning = FALSE, message = FALSE,fig.pos="H",fig.align="center",out.width="70%",
+                      cache=FALSE,comment = NA)
+````
+
+
+# Ejercicio 01
+
+Generaremos de datos normales multivariados de forma aleatoria con distribución normal multivariada usando la función mvrnorm de la librería MASS. ver doc package MASS [-@ripley2013package]
+
+Donde requiere los siguientes argumentos:
+
+- n (el tamaño de la muestra que se quiere generar) generaremos 5000 filas.
+- ${\mu}$ (el vector de medias) el cual serca un vector = [0,0].
+- ${\Sigma}$ la matriz de var-cov [[1,0.8],[0.8,1]].
+
+Usando la funcion `mvnnorm` de la siguiente forma:
+```r
+mvrnorm(n.filas,vector.medias,matriz.covarianza)
+```
+
+Obtenemos los siguientes datos normales multivariados, mosramos el head de lso datos.
+
+```{r echo=FALSE}
+require(MASS)
+n.filas<-5000 # n
+vector.medias<-c(0,0) # μ
+matriz.covarianza<-matrix(c(1, 0.8, 0.8, 1), ncol=2) # sigma Σ la matriz de var-cov
+datos<-mvrnorm(n.filas,vector.medias,matriz.covarianza)
+
+df.muestra.head <- data.frame( head(datos))
+colnames(df.muestra.head)<-c("X1","X2")
+
+df.muestra.head %>% 
+  knitr::kable(booktabs = TRUE,caption="Head Datos aleatorios") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+## Resúmenes descriptivos
+
+### Vector de medias
+```{r echo=FALSE}
+df.datos.media <- cbind(c("X1","X2"), apply(datos, 2, mean) )
+colnames(df.datos.media) <- c("Variables","Mean")
+df.datos.media%>% 
+  knitr::kable(booktabs = TRUE,caption="Tabla vector de medias") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+### Matriz de var-cov
+```{r}
+df.datos.varcov <-   var(datos)
+colnames(df.datos.varcov ) <- c("X1","X2")
+rownames(df.datos.varcov ) <- c("X1","X2")
+df.datos.varcov%>% 
+  knitr::kable(booktabs = TRUE,caption="Tabla var-cov") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+### Matriz de correlación
+```{r}
+df.datos.cor <-   cor(datos)
+colnames(df.datos.cor ) <- c("X1","X2")
+rownames(df.datos.cor ) <- c("X1","X2")
+df.datos.cor%>% 
+  knitr::kable(booktabs = TRUE,caption="Tabla correlación") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+### summary
+
+```{r}
+df.datos.summary <- summary(datos)
+df.datos.summary%>% 
+  knitr::kable(booktabs = TRUE,caption="Summary") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+Las variables V1 y V2 presentan distribuciones estadísticas similares. Para V1, la mayoría de los datos se concentran alrededor de la media (-0.02242), con valores que varían desde -3.91040 hasta 3.81811. En cuanto a V2, los datos tienen una dispersión similar en torno a la media (-0.004921), con valores que oscilan entre -3.453670 y 3.731694.
+
+En cuanto a la relación entre las variables, la matriz de correlación muestra una fuerte correlación positiva de 0.8029123 entre V1 y V2. La matriz de covarianza refleja una covarianza positiva de 0.7999135 entre ambas variables, indicando una tendencia similar en sus variaciones.
+
+## Gráficos bi-variados
+
+### boxplot
+
+```{r}
+boxplot(datos, main = 'Datos aleatorios MV', horizontal = F, xlab = 'X aleatoria', col = "skyblue")
+```
+
+
+### Plot
+De acuerdo con el grafico de dispersion se observa una relacion lineal positiva entre las variables aleatorias x1, x2, de hecho en la tabla de correlacion es cerca al 80% aproximadanmente. De manera que hay un alto nivel de dependencia entre las variables.
+
+
+```{r}
+plot(datos[,1],datos[,2], xlab = "x aletoriaa", ylab = "y aleatoria", main="Distribucion aleatorios MV")
+```
+
+## Validación de normalidad univariada y bi-variada
+
+```{r}
+datos.media<-apply(datos,2,mean)
+datos.var<-var(datos)
+distancias2<-mahalanobis(datos,datos.media,datos.var)
+d2<-sort(distancias2)
+y<-c(rep(0,nrow(datos)))
+for(j in 1:nrow(datos)){
+  y[j]<-(j-0.5)/nrow(datos)
+}
+q<-qchisq(y,4)
+plot(d2,q)
+
+```
+
+Salidas básicas  prueba normalidad con la funcion `mvn` de tipo mardia y univariada Shapiro y Wilk.
+
+```{r echo=FALSE}
+library(MVN)
+resul <- mvn(datos, mvnTest=c("mardia"), univariateTest=c("SW"))
+df.datos.prueba.multi <- data.frame(resul[1])
+df.datos.prueba.univa <- data.frame(resul[2])
+
+df.datos.prueba.multi %>% 
+  knitr::kable(booktabs = TRUE,caption="Multivariate Normality") %>%
+kableExtra::kable_styling(full_width = FALSE)
+
+df.datos.prueba.univa %>% 
+  knitr::kable(booktabs = TRUE,caption="Univariate Normality") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+Parece que gran cantidad de los puntos cae sobre una recta de pendiente 1, poodria aprobarse la prueba de normalidad.
+
+# Ejercicio 02
+
+Los datos utilizados en este análisis descriptivo fueron extraídos de la página oficial del examen Saber 11, correspondientes al periodo 2015-2, los cuales se pueden descargar desde el sitio web: Datos-Icfes. Esta tarea Se limita a trabajar únicamente al departamento de Cesar, Colombia y los promedios de sociales y matematicas.
+
+```{r echo=FALSE}
+library("dplyr") 
+library(readxl)
+Bd.saber.201502 <- read_excel("datos/saber11_20152.xls", skip = 3)
+
+# filtro los datos del departamento del cesar
+Bd.saber.201502.Cesar <- filter(Bd.saber.201502, DEPARTAMENTO=="CESAR")
+
+# filtro columnas necesarios
+Dataframe.Cesar <- Bd.saber.201502.Cesar[,c(
+  "PROMMATEMATICA","PROMSOCIALESYCIUDADANAS")]
+
+
+head(Dataframe.Cesar)%>% 
+  knitr::kable(booktabs = TRUE,caption="Head Datos pruebas Cesar") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+## Resúmenes descriptivos
+### Vector de medias
+```{r echo=FALSE}
+df.cesar.medias <- data.frame(  apply(Dataframe.Cesar, 2, mean))
+colnames(df.cesar.medias) <- c("Mean")
+
+df.cesar.medias %>% 
+  knitr::kable(booktabs = TRUE,caption="Vector de medias") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+### Matriz de var-cov
+
+```{r echo=FALSE}
+
+var(Dataframe.Cesar) %>% 
+  knitr::kable(booktabs = TRUE,caption="Tabla de var-cov") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+
+### Matriz de correlación
+```{r echo=FALSE}
+
+cor(Dataframe.Cesar) %>% 
+  knitr::kable(booktabs = TRUE,caption="Tabla correlación") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+### summary
+
+```{r echo=FALSE}
+#df.datos.summary <- summary(Dataframe.Cesar)
+summary(Dataframe.Cesar) %>% 
+  knitr::kable(booktabs = TRUE,caption="Summary") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+Las calificaciones promedio en PROMMATEMATICA oscilan entre 34.00 y 68.66 (media: 46.85), y en PROMSOCIALESYCIUDADANAS entre 28.00 y 65.07 (media: 46.54). Existe una fuerte correlación positiva (0.88) entre ambas materias, indicando que los estudiantes tienden a tener rendimientos similares.
+
+## Gráficos bi-variados
+
+### boxplot
+
+```{r}
+boxplot(Dataframe.Cesar, main = 'Promedios', horizontal = F, xlab = 'Promedios', col = "skyblue")
+```
+
+
+### Plot
+De acuerdo con el grafico de dispersion se observa una relacion lineal positiva entre las variables aleatorias x1, x2, de hecho en la tabla de correlacion es cerca al 80% aproximadanmente. De manera que hay un alto nivel de dependencia entre las variables.
+
+
+```{r}
+plot(Dataframe.Cesar, xlab = "P. Matematica", ylab = "P. Sociales", main="Distribucion")
+```
+
+## Validación de normalidad univariada y bi-variada
+
+```{r}
+df.datos.media<-apply(Dataframe.Cesar,2,mean)
+df.datos.var<-var(Dataframe.Cesar)
+df.distancias2<-mahalanobis(Dataframe.Cesar,df.datos.media,df.datos.var)
+df.d2<-sort(df.distancias2)
+df.y<-c(rep(0,nrow(Dataframe.Cesar)))
+for(j in 1:nrow(Dataframe.Cesar)){
+  df.y[j]<-(j-0.5)/nrow(Dataframe.Cesar)
+}
+df.q<-qchisq(df.y,4)
+plot(df.d2,df.q)
+
+```
+
+Salidas básicas  prueba normalidad con la funcion `mvn` de tipo royston y univariada Shapiro y Wilk.
+
+```{r echo=FALSE}
+library(MVN)
+df.resul <- mvn(Dataframe.Cesar, mvnTest=c("royston"), univariateTest=c("SW"))
+df.datos.cesar.multi <- data.frame(df.resul[1])
+df.datos.cesar.univa <- data.frame(df.resul[2])
+
+df.datos.cesar.multi %>% 
+  knitr::kable(booktabs = TRUE,caption="Multivariate Normality") %>%
+kableExtra::kable_styling(full_width = FALSE)
+
+df.datos.cesar.univa %>% 
+  knitr::kable(booktabs = TRUE,caption="Univariate Normality") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+Parece quede los puntos NO caen sobre una recta de pendiente 1, entonces no poodria aprobarse la prueba de normalidad.
+
+## Transformaciones  Multivariado
+Para cada una de las variables. Sea $\lambda_1,\lambda_2$ las transformaciones de potencia para las $p$  variables Promedio matematicas y Promedio sociales, y transformaremos los datos con `bcnPower`.
+
+```{r}
+library(car)
+
+transf <- powerTransform(Dataframe.Cesar , family = "bcnPower")
+
+
+datos_new <- basicPower(Dataframe.Cesar, c(transf$lambda[1],transf$lambda[2]) )
+
+
+head(datos_new) %>% 
+  knitr::kable(booktabs = TRUE,caption="Tabla nuevos datos normalizados") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+### Nueva prueba de normalidad
+Salidas básicas  prueba normalidad con la funcion `mvn` de tipo royston y univariada Shapiro y Wilk.
+
+```{r echo=FALSE}
+df2.resul <- mvn(datos_new, mvnTest=c("royston"), univariateTest=c("SW"))
+df2.datos.cesar.multi <- data.frame(df2.resul[1])
+df2.datos.cesar.univa <- data.frame(df2.resul[2])
+
+df2.datos.cesar.multi %>% 
+  knitr::kable(booktabs = TRUE,caption="Multivariate Normality") %>%
+kableExtra::kable_styling(full_width = FALSE)
+
+df2.datos.cesar.univa %>% 
+  knitr::kable(booktabs = TRUE,caption="Univariate Normality") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6) 
+```
+
+<!-- Los datos a utilizar son los resultados de las pruebas Saber-11 del año 2015-2, es decir calendario-A del año 2015, los cuales se pueden descargar desde el sitio web: [\textcolor{blue}{Datos-Icfes}](https://www.icfes.gov.co/). A cada estudiante se le asignará un departamento.  -->
+
+<!-- ## Algunas formas para poner referencias -->
+
+<!-- **Ejemplos de cómo citar las referencias:** Consultar el libro [@AppliedMultiv2007], [@Luque2017], ver Luque [-@Luque2017], [@rmarkdown2018], ver Hadley [-@tidyverse2019], [@icfes_glosario], [@icfes2], [@icfes3], [@icfes4]. -->
+
+<!-- ver [@2020covid] -->
+
+<!-- ver  -->
+
+<!-- ## dafsafad  -->
+
+<!-- Con los datos del departamento asignado realice las siguientes actividades previas. -->
+
+
+<!-- # djfl cjf cksa -->
+
+<!-- 1. Crear un proyecto en Rmarkdown de nombre tarea1_mma. -->
+
+<!-- # dfj aslfd  -->
+
+<!-- 2. Descargue la base de datos asignada-BD (la cual está en excel) y guárdela en la carpeta del proyecto.  -->
+
+<!-- # daf casf ka -->
+
+<!-- dLJ sakdf  -->
+<!-- **solución:** -->
+
+<!-- ## fdjf saf -->
+
+<!-- sfl slsjfl alf -->
+
+
+
+## Bibliografía
+
+
+
+
