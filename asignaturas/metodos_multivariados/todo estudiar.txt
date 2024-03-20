@@ -1,0 +1,8 @@
+ACP analisis de componentes principales
+tratar de explicar la extructura de la matriz de covarianza entre vectores, por lo general
+es explicada en menos componentes al original
+ACS analisis de componentes simples
+ACM analsis de compoenentes multiple
+A-Clusters analisis clisters
+A-analisis discriminal
+AFF analisis factorial de factores comunes
