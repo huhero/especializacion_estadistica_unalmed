@@ -1,0 +1,231 @@
+---
+fontsize: 12pt # 10pt,11pt
+geometry: margin = 2.5cm 
+documentclass: article
+output: 
+  pdf_document:
+    includes:
+      before_body: portadas/portada_mma.tex
+    toc: TRUE
+    number_sections: yes
+    fig_caption: yes
+metodobib: true
+csl: methods-in-ecology-and-evolution.csl  #formato de citacion
+#cls: apa.csl
+#csl: vancouver.csl
+biblio-style: "apalike"    #estilo de citacion
+#biblio-style: natbib, plainnat, abbrvnat, unsrtnat , apalike
+bibliography: ["bib/library.bib","bib/paquetes.bib","bib/referencias.bib"]
+link-citations: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+````{r setup, include = F}
+library(knitr)
+if(!require(pacman)) install.packages("pacman"); library(pacman)
+pacman::p_load("tidyverse", "knitr", "HH",
+               "magrittr","readr","readxl","Amelia","janitor",
+               "leaps","MASS","clusterGeneration")
+
+knitr::opts_chunk$set(fig.path = 'figurasR/',
+                      echo = FALSE, warning = FALSE, message = FALSE,fig.pos="H",fig.align="center",out.width="70%",
+                      cache=FALSE,comment = NA)
+````
+
+
+# Introducción
+
+En este trabajo, analizaremos el indicador "ingreso nacional por adulto" utilizando datos de la  [\textcolor{blue}{World Inequality Database}](https://wid.world/es/series/#countriestimeseries/anninc_p0p100_z/WO;BS;BB;CU;HT;JM;PR;DO;LC;VC;TT/1820/2022/eu/k/p/yearly/a) para varios países del Caribe. Nos enfocaremos en los siguientes países: Bahamas, Barbados, Cuba, Haití, Jamaica, Puerto Rico, República Dominicana, Santa Lucía, San Vicente y las Granadinas, y Trinidad y Tobago.    
+
+## Aclaración sobre la Temporalidad de los Datos
+
+Es importante tener en cuenta que los datos utilizados en este análisis corresponden a los años anteriores a la pandemia de COVID-19. Dado que la pandemia ha tenido un impacto significativo en la economía global y en la distribución de ingresos, es posible que las tendencias observadas en estos datos no reflejen la situación actual.
+
+Durante los años para los cuales se disponen datos (1999-2019), no se consideran los efectos económicos directos de la pandemia. Sin embargo, es importante reconocer que pueden haber ocurrido cambios importantes en la distribución de ingresos y en la economía en general desde entonces.
+
+Se recomienda interpretar estos resultados en el contexto de la temporalidad de los datos y considerar el posible impacto de la pandemia en las tendencias de ingresos y desigualdad económica en los países analizados.
+
+
+# Carga de Datos
+
+Comenzamos cargando los datos y realizando las transformaciones necesarias para su análisis. A continuación  una muestra de la data final.
+
+```{r echo=FALSE}
+library(readr)
+data <- read_csv("datos/caribe_income_wid_db.csv", 
+    col_types = cols(Percentile = col_factor(levels = c("p0p100")), 
+        Year = col_double()))
+head(data[,c("Percentile","Year","Mundo","Barbados","Bahamas","Cuba","Haití","Jamaica")]) %>% 
+  knitr::kable(booktabs = TRUE,caption="Head Datos paises caribe 01") %>%
+kableExtra::kable_styling(full_width = FALSE)
+
+head(data[,c("Percentile","Year","Mundo","Puerto Rico","República Dominicana","Santa Lucía","Trinidad y Tobago")]) %>% 
+  knitr::kable(booktabs = TRUE,caption="Head Datos Paises caribe 02") %>%
+kableExtra::kable_styling(full_width = FALSE)
+```
+
+# Formación de Subconjuntos de Datos
+Dado que tenemos datos disponibles desde 1999 hasta 2019, formaremos dos subconjuntos correspondientes a los últimos dos decenios:
+
+```{r}
+# Subconjunto para el último decenio (2010-2019)
+data_decade1 <- data %>%
+  filter(Year >= 2010 & Year <= 2019)
+
+# Subconjunto para el penúltimo decenio (2000-2009)
+data_decade2 <- data %>%
+  filter(Year >= 2000 & Year <= 2009)
+
+data_decade1 %>% 
+  knitr::kable(booktabs = TRUE,caption="Head Datos Decada 01") %>%
+kableExtra::kable_styling(full_width = FALSE, font_size = 6)
+
+data_decade2 %>% 
+  knitr::kable(booktabs = TRUE,caption="Head Datos Decada 02") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+```
+
+# Pruebas de hipótesis del vector de medias por decenios
+Al realizar pruebas de normalidad multivariada, estamos evaluando si los datos siguen una distribución multivariada normal, lo cual es un supuesto necesario para el análisis de varianza. Estas pruebas nos permiten verificar la validez de este supuesto antes de realizar un análisis.
+
+## Resultados para el primer decenio (2010-2019):
+```{r echo=FALSE}
+library(MVN)
+library(MASS)
+# Realizar pruebas de normalidad multivariada para cada decenio
+mvn_decade1 <- mvn(
+  data_decade1[,c("Barbados","Bahamas","Cuba","Haití","Jamaica","Puerto Rico","República Dominicana","Santa Lucía","Trinidad y Tobago")], 
+  mvnTest=c("royston"), 
+  univariateTest=c("SW"))
+
+# Imprimir los resultados
+data.frame(mvn_decade1[1]) %>% 
+  knitr::kable(booktabs = TRUE,caption="Normalidad Multivariada ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+
+data.frame(mvn_decade1[2]) %>% 
+  knitr::kable(booktabs = TRUE,caption="Normalidad Univariada ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+```
+La prueba de Royston no rechaza la hipótesis de normalidad multivariada (p-value = 0.0743 > 0.05), lo que sugiere que los datos podrían seguir una distribución multivariada normal.
+
+Para las pruebas de normalidad univariada de Shapiro-Wilk, la mayoría de las variables no rechazan la hipótesis de normalidad a un nivel de significancia del 5%, ya que sus p-values son mayores que 0.05. Sin embargo, la variable "Haití" tiene un p-value muy bajo (0.0003), lo que sugiere que no sigue una distribución normal.
+
+## Resultados para el segundo decenio (2000-2009)
+```{r echo=FALSE}
+library(MVN)
+library(MASS)
+# Realizar pruebas de normalidad multivariada para cada decenio
+mvn_decade2 <- mvn(
+  data_decade2[,c("Barbados","Bahamas","Cuba","Haití","Jamaica","Puerto Rico","República Dominicana","Santa Lucía","Trinidad y Tobago")], 
+  mvnTest=c("royston"), 
+  univariateTest=c("SW"))
+
+# Imprimir los resultados
+data.frame(mvn_decade2[1]) %>% 
+  knitr::kable(booktabs = TRUE,caption="Normalidad Multivariada ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+
+data.frame(mvn_decade2[2]) %>% 
+  knitr::kable(booktabs = TRUE,caption="Normalidad Univariada ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+```
+La prueba de Royston rechaza la hipótesis de normalidad multivariada (p-value = 0.0104 < 0.05), lo que sugiere que los datos no siguen una distribución multivariada normal.
+
+Para las pruebas de normalidad univariada de Shapiro-Wilk, las variables "Cuba", "Jamaica" y "Santa Lucía" tienen p-values inferiores a 0.05, lo que indica que no siguen una distribución normal. El resto de las variables no rechazan la hipótesis de normalidad a un nivel de significancia del 5%.
+
+
+# Pruebas de hipótesis de igual de vectores de medias
+Primero calculamos la matriz de varianzas-covarianzas para cada decenio usando la función cov. 
+
+```{r echo=FALSE}
+library(ICSNP)
+
+# Verificar igualdad de matrices de varianzas-covarianzas poblacionales
+cov_matrix_decade1 <- cov(data_decade1[, -c(1,2)])
+cov_matrix_decade2 <- cov(data_decade2[, -c(1,2)])
+
+cov_matrix_decade1 %>% 
+  knitr::kable(booktabs = TRUE,caption="Matriz de covarianza decada 2009 2019 ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+
+cov_matrix_decade2 %>% 
+  knitr::kable(booktabs = TRUE,caption="Matriz de covarianza decada 1999 2009 ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+```
+
+Luego verificamos si ambas matrices son positivas definidas 
+
+
+```{r echo=FALSE}
+cov_test_decade1 <- det(cov_matrix_decade1)
+cov_test_decade2 <- det(cov_matrix_decade2)
+cov_test_decade1 %>% 
+  knitr::kable(booktabs = TRUE,caption="Matriz determinante decada 2009 2019 ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+
+cov_test_decade2 %>% 
+  knitr::kable(booktabs = TRUE,caption="Matriz determinante 1999 2009 ") %>%
+kableExtra::kable_styling(full_width = FALSE,font_size = 6)
+
+```
+
+Realizamos la prueba de Hotelling's T^2 ver [-@hotelling1931generalization]  usando la función hotelling.test ver [-@R-hotelling-test]  . Si alguna de las matrices no es positiva definida, indicamos que no podemos realizar la prueba de Hotelling's T^2.
+
+```{r echo=FALSE}
+
+hotelling_test <- HotellingsT2(data_decade1[, -c(1,2)], data_decade2[, -c(1,2)])
+hotelling_test
+```
+
+# Conclusiones
+Basándonos en los resultados de la prueba de Hotelling's T^2
+
+- **Estadística de Prueba:** El valor de la estadística de prueba T^2 es de 16.749.
+- **Grados de Libertad:** Los grados de libertad para esta prueba son df1 = 11 y df2 = 8.
+- **Valor p:** El valor p obtenido es de 0.0002446.
+- **Hipótesis Nula y Alternativa:** La hipótesis nula es que no hay diferencia en los vectores de medias entre los dos decenios. La hipótesis alternativa es que hay una diferencia en los vectores de medias entre los dos decenios.
+
+Dado que el valor p es menor que cualquier nivel de significancia común (como 0.05), rechazamos la hipótesis nula. Esto sugiere que hay suficiente evidencia para concluir que hay diferencias significativas en los vectores de medias entre los dos decenios para las sub-regiones de la región asignada.
+
+En resumen, los resultados de la prueba indican que hay cambios significativos en los ingresos nacionales por adulto entre los dos decenios analizados. Esto puede ser de interés para comprender mejor las tendencias económicas y sociales en la región durante ese período.
+
+<!-- Los datos a utilizar son los resultados de las pruebas Saber-11 del año 2015-2, es decir calendario-A del año 2015, los cuales se pueden descargar desde el sitio web: [\textcolor{blue}{Datos-Icfes}](https://www.icfes.gov.co/). A cada estudiante se le asignará un departamento.  -->
+
+<!-- ## Algunas formas para poner referencias -->
+
+<!-- **Ejemplos de cómo citar las referencias:** Consultar el libro [@AppliedMultiv2007], [@Luque2017], ver Luque [-@Luque2017], [@rmarkdown2018], ver Hadley [-@tidyverse2019], [@icfes_glosario], [@icfes2], [@icfes3], [@icfes4]. -->
+
+<!-- ver [@2020covid] -->
+
+<!-- ver  -->
+
+<!-- ## dafsafad  -->
+
+<!-- Con los datos del departamento asignado realice las siguientes actividades previas. -->
+
+
+<!-- # djfl cjf cksa -->
+
+<!-- 1. Crear un proyecto en Rmarkdown de nombre tarea1_mma. -->
+
+<!-- # dfj aslfd  -->
+
+<!-- 2. Descargue la base de datos asignada-BD (la cual está en excel) y guárdela en la carpeta del proyecto.  -->
+
+<!-- # daf casf ka -->
+
+<!-- dLJ sakdf  -->
+<!-- **solución:** -->
+
+<!-- ## fdjf saf -->
+
+<!-- sfl slsjfl alf -->
+
+# Bibliografía
+
+
+
+
+
