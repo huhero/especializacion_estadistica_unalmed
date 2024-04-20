@@ -1,0 +1,97 @@
+---
+title: 'informe: Automóviles Barranquilla'
+output: pdf_document
+date: "2024-04-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  message = FALSE, 
+  warning = FALSE
+  )
+```
+
+# Análisis Descriptivo
+```{r}
+require(janitor)
+require(magrittr)
+require(tidyverse)
+
+datos <- read.table("automoviles_barranquilla.txt", sep = "&", header = TRUE)
+datos %<>% clean_names()
+```
+
+En este informe analizaremos la base de datos **automoviles_barranquilla.csv** dicha *base de datos* tiene `r nrow(datos)` filas y `r ncol(datos)` variables.
+
+```{r include=FALSE}
+datos %<>% mutate_if(is.character, as.factor)
+datos %>% str()
+```
+
+Segun el siguiente grafico no se presentan datos faltantes en la base de datos.
+
+```{r fig.height=4, fig.width=10}
+require(Amelia)
+missmap(datos)
+```
+Donde se puede ver que año tras año a estado incrementado el registro de automoviles.
+
+```{r fig.height=6, fig.width=10}
+datos %>% group_by(ano_corte) %>% 
+  summarise(total=sum(cant_vehiculos)) %>% 
+  ggplot(aes(x=ano_corte, y=total))+
+  geom_col(fill="skyblue") + xlab("Ano")  + labs(title = "Evolucion por ano")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+datos %>% filter(servicio!="PARTICULAR") %>% ggplot(aes(x=servicio, y=cant_vehiculos))+
+  geom_boxplot()
+```
+Donde el que mas aporta a la evolucion es el tipo de servicio PARTICULAR
+
+```{r}
+datos %>% filter(servicio!="NO APLICA") %>% 
+  group_by(ano_corte, servicio) %>% 
+  summarise(total = sum(cant_vehiculos)) %>% 
+  ggplot(aes(x=ano_corte, y=total, col= servicio))+
+  geom_line()
+```
+
+
+
+```{r}
+datos %>% filter(servicio %in% c("OTROS","PUBLICO","OFICIAL" )) %>% 
+  group_by(ano_corte, servicio) %>% 
+  summarise(total = sum(cant_vehiculos)) %>% 
+  ggplot(aes(x=ano_corte, y=total, col= servicio))+
+  geom_line()
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+datos %>% group_by(ano_corte, combustible) %>% 
+  summarise(total = sum(cant_vehiculos)) %>% 
+  ggplot(aes(x=ano_corte, y=total, col= combustible))+
+  geom_line()
+```
+
+
+
+
+```{r}
+datos %>% filter(combustible %in% c("ELECTRICO","GASO-ELEC", "DIES-ELEC")) %>% group_by(ano_corte, combustible) %>% 
+  summarise(total = sum(cant_vehiculos)) %>% 
+  ggplot(aes(x=ano_corte, y=total, col= combustible))+
+  geom_line()
+```
