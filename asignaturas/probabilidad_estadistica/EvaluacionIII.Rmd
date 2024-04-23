@@ -1,0 +1,444 @@
+---
+title: 'Evaluación 3: Distribuciones de Probabilidad'
+author: "hurodriguezm"
+date: "2024-04-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Caso de la resistencia de los pañuelosI
+En esta parte, se analiza cómo los cambios en la media y en la desviación estándar afectan la fracción de pañuelos que no cumple con las especificaciones de RDT. Suponga en esta pregunta que la RDT sigue una distribución normal con media $\mu$ = 300 y varianza $\sigma{^2}$ = 16. Responda las siguientes preguntas utilizando funciones de R. Los cálculos de probabilidades deben estar acompañados de una gráfica que represente la probabilidad pedida.
+
+## Punto Ia
+¿Qué fracción de pañuelos tendrá una RDT inaceptable (RDT por debajo de 290 o por encima de 315 lb/resma)?.
+
+  **Solución**
+  
+  La fraccion de panuelos inaceptables se puede definir con función de distribución acumulativa (CDF) de la distribución normal. Donde sumo las probabilidades de los intervalos antes de 290 lb/resma y después de 315 lb/resma.
+  
+  $P(X< 290 | X>315 ) =  [ P(X < 290)] + [1-P(X > 315 )] $
+  
+  ```{r}
+  # Parámetros de la distribución normal
+  media <- 300
+  # la desviación es la raiz cuadrada de la varianza, donde nos indican que la varianza es 16
+  desviacion <- sqrt(16)
+  
+  # Intervalo inferior
+  intervalo_inferior <- 290
+  
+  # Intervalo superior
+  intervalo_superior <- 315
+  
+  # Probabilidad de RDT < 290 lb/resma
+  prob_inferior <- pnorm(intervalo_inferior, mean = media, sd = desviacion)
+  
+  # Probabilidad de RDT > 315 lb/resma
+  prob_superior <- 1 - pnorm(intervalo_superior, mean = media, sd = desviacion)
+  
+  # Suma de ambas probabilidades para obtener la fracción total de pañuelos inaceptables
+  (fraccion_inaceptable <- prob_inferior + prob_superior)
+  ```
+  La fracción inaceptable sería  de un `r round(fraccion_inaceptable * 100,4)`%.
+  
+  
+  **Gráfica de la pmf y la cdf**
+  
+  
+  ```{r}
+  # función para generar valores de la distribución.
+  datos <- rnorm(10000, mean = media, sd = desviacion)
+  
+  x <- seq(270, 330, by = 0.1)
+  y <- dnorm(x, mean = media, sd = desviacion)
+  plot(x, y, type = "l", xlab = "RDT (lb/resma)", ylab = "Densidad de probabilidad", main = "Distribución Normal de RDT")
+  abline(v = c(intervalo_inferior, intervalo_superior), col = "red", lty = 2)
+  legend("topright", legend = c("RDT < 290 lb/resma", "RDT > 315 lb/resma"), col = "red", lty = 2)
+
+  ```
+
+## Punto Ib
+¿Qué fracción tendría una RDT inaceptable si el valor de $\mu$ fuera 298 con el mismo valor de $\sigma{^2}$?.
+
+  **Solución **
+  
+  ```{r}
+  # Nuevos parámetros
+  media_nueva <- 298
+  desviacion <- sqrt(16)
+  
+  # Calcular la probabilidad de RDT < 290 lb/resma
+  prob_inferior_nueva <- pnorm(intervalo_inferior, mean = media_nueva, sd = desviacion)
+  
+  # Calcular la probabilidad de RDT > 315 lb/resma
+  prob_superior_nueva <- 1 - pnorm(intervalo_superior, mean = media_nueva, sd = desviacion)
+  
+  # Calcular la fracción de pañuelos inaceptables
+  (fraccion_inaceptable_nueva <- prob_inferior_nueva + prob_superior_nueva)
+  
+  ```
+  
+  La fracción inaceptable sería  de un `r round(fraccion_inaceptable_nueva * 100,4)`%.
+  
+  **Gráfica de la pmf y la cdf**
+  
+  ```{r}
+   # función para generar valores de la distribución.
+  datos <- rnorm(10000, mean = media_nueva, sd = desviacion)
+  
+  x <- seq(270, 330, by = 0.1)
+  y <- dnorm(x, mean = media_nueva, sd = desviacion)
+  plot(x, y, type = "l", xlab = "RDT (lb/resma)", ylab = "Densidad de probabilidad", main = "Distribución Normal de RDT")
+  abline(v = c(intervalo_inferior, intervalo_superior), col = "red", lty = 2)
+  legend("topright", legend = c("RDT < 290 lb/resma", "RDT > 315 lb/resma"), col = "red", lty = 2)
+  ```
+
+
+## Punto Ic
+Suponga $\mu$ = 300 y $\sigma$ = 4. ¿Cuál es el valor de la RDT que es superado por el 95% de los pañuelos? ¿Cuál sería el valor de la RDT que es superado por el 99% de los pañuelos?.
+
+
+  **Solución**
+  ```{r}
+  media_nueva_c95 <- 300
+  desviacion_nueva_c95 <- 4
+  
+  # Calcular el valor de la RDT superado por el 95% de los pañuelos
+  (valor_95 <- qnorm(0.95, mean = media_nueva_c95, sd = desviacion_nueva_c95))
+  ```
+  
+  El 95% de los pañuelos tienen una resistencia a la tracción menor que `r valor_95`
+  
+  ```{r}
+  media_nueva_c99 <- 300
+  desviacion_nueva_c99 <- 4
+  
+  # Calcular el valor de la RDT superado por el 99% de los pañuelos
+  (valor_99 <- qnorm(0.99, mean = media_nueva_c99, sd = desviacion_nueva_c99))
+  ```
+  
+  El 99% de los pañuelos tienen una resistencia a la tracción menor que `r valor_99`
+
+
+## Punto IIa
+Suponga que el proceso de fabricación funciona correctamente y que la RDT sigue una
+distribución normal con media $\mu$ = 300 lb/resma y desviación estándar $\sigma$ = 4 lb/resma. 
+
+Investigue como obtener en R una muestra aleatoria de una distribución normal con las
+característica anteriores y úsela para simular 200 mediciones de la RDT (use el número de la cédula
+como semilla en la función set.seed(#CC)). Esto corresponderá a seleccionar aleatoriamente 200
+pañuelos y obtener una medición de RDT para cada uno de ellos.
+
+  **Solución**
+  ```{r}
+  # Semilla
+  set.seed(1022952094)
+  
+  # Parámetros de la distribución normal
+  media_2a <- 300
+  desviacion_2a <- 4
+  
+  # Generar una muestra aleatoria de 200 mediciones de la RDT
+  muestra_2a <- rnorm(200, mean = media_2a, sd = desviacion_2a)
+  
+  # Mostrar las primeras 10 mediciones de la RDT
+  head(muestra_2a, 10)
+
+  ```
+  
+  **PMF**
+  ```{r}
+  hist(muestra_2a, breaks = 20, prob = TRUE, main = "PMF de la RDT", xlab = "RDT (lb/resma)", ylab = "Probabilidad")
+  
+  ```
+  
+## Punto IIb
+Cuente el número de hojas inaceptables (RDT por debajo de 290 o por encima de 315) en
+la muestra. ¿El número observado de hojas inaceptables es coherente con la predicción teórica
+obtenida en la pregunta 1. literal a.?.
+
+  **Solución **
+  ```{r}
+  # Contar el número de hojas inaceptables en la muestra
+  (hojas_inaceptables <- length(muestra_2a[muestra_2a < 290 | muestra_2a > 315]))
+
+  ```
+  
+   el número de hojas inaceptable es: `r hojas_inaceptables` el cual representa el `r round((hojas_inaceptables/200)*100,6)`% el cual es un porcentaje muy cercano a la respuesta de obtenida de la pregunta 1a que fue de: `r round(fraccion_inaceptable * 100,4)`%.
+  
+## Punto IIc
+Use R para obtener un gráfico de probabilidad normal (QQplot) de las 200 observaciones.
+Describa el patrón que se muestra en la gráfica. ¿Es el gráfico consistente con la teoría? Explicar
+brevemente.
+
+  **Solución**
+  
+  ```{r}
+  # Crear QQ plot de las 200 observaciones
+  qqnorm(muestra_2a)
+  qqline(muestra_2a)
+
+  ```
+  Los puntos en el QQ plot siguen aproximadamente una línea recta, esto indica que las observaciones están distribuidas de manera similar en la distribución normal. La mayoría  están de los puntos estan sobre la línea,  lo cual hace  más consistente que la muestra sea una distribución normal.
+
+
+
+## Punto III
+
+El fabricante ha implementado recientemente algunos cambios en el proceso de fabricación
+que se espera que mejoren las propiedades de separación de los pañuelos. Para evaluar el efecto de los
+cambios en la distribución de la RDT, se tomó una muestra aleatoria que constaba de 80 pañuelos,
+y las mediciones de la RDT se registraron en el archivo new_rdtXX.txt, donde XX corresponde a su
+posición (NRO) en la siguiente lista del curso (identifique su cédula con la variable ID).
+
+### Punto IIIa
+Utilice R para calcular la media y la desviación estándar de las 80 mediciones de RDT.
+¿Son consistentes los valores con los parámetros objetivo (media $\mu$ = 300 lb/resma y una desviación
+estándar $\sigma$ = 4 lb/resma)? Comente brevemente.
+
+**Solución**
+
+  ```{r}
+  new_rdt10 <- read.table("new_rdt10.txt", header = TRUE)
+  
+  # Calcular la media y la desviación estándar de las 80 mediciones de RDT
+  media <- mean(new_rdt10$x)
+  desviacion <- sd(new_rdt10$x)
+  
+  # Mostrar los resultados
+  media
+  desviacion
+  
+  ```
+  
+  Los resultados obtenidos son los siguientes:
+
+  - Media: 302.5869 lb/resma
+  - Desviación estándar:6.082483 lb/resma
+  
+  Al comparar estos resultados con los parámetros objetivo:
+
+  La media calculada (302.5869 lb/resma) está ligeramente por encima del valor objetivo de300 lb/resma. La desviación estándar calculada (6.082483 lb/resma) es mayor que el valor objetivo de  4 lb/resma.
+  
+  Las mediciones de RDT están ligeramente por encima del valor objetivo, y la variabilidad de las mediciones también es mayor de lo esperado. Tendriamos que investigar un poco mas si algun aspecto del proceso de fabricación que esté contribuyendo a estas diferenicas.
+  
+### Punto IIIb
+Use la muestra para realizar un gráfico de probabilidad normal para verificar el supuesto
+de normalidad en la distribución de la RDT. Describa el patrón que se muestra en la gráfica. ¿Hay
+alguna indicación fuerte de que los datos no siguen una distribución normal? Explicar brevemente.
+
+  **Solución**
+  ```{r}
+  
+  qqnorm(new_rdt10$x)
+  qqline(new_rdt10$x)
+
+  ```
+  
+  Hay desviaciones notables de la línea, esto indicaría que los datos pueden no seguir una distribución normal. Si Los puntos en el QQ plot están cerca de la línea pero no caen exactamente sobre ella, eso podría indicar una ligera discrepancia con una distribución normal, pero no necesariamente invalida por completo el supuesto de normalidad.
+
+### Punto IIIc
+
+Use sus hallazgos en las partes a. y b. para preparar un informe breve para la administración
+que indique si los cambios implementados, han mejorado o no, las cualidades de separación de
+los pañuelos. En particular, comente sobre los cambios en los parámetros del proceso (media y
+desviación estándar) y la normalidad de la distribución de la RDT.
+
+  **Solución **
+  
+  1. Cambios en los Parámetros del Proceso:
+
+  Basándonos en el análisis de las 80 mediciones de la Resistencia a la Tracción (RDT), observamos que la media calculada de las mediciones es de 302.5869 lb/resma y la desviación estándar calculada es de  6.082483 lb/resma. Comparando estos valores con los parámetros objetivo establecidos anteriormente (media $\mu$ = 300 lb/resma y desviación estándar $\sigma$ = 4 lb/resma), notamos que la media calculada está ligeramente por encima del valor objetivo, mientras que la desviación estándar calculada es mayor que el valor objetivo.
+  
+  2. Normalidad de la Distribución de la RDT:
+  Utilizando un gráfico de probabilidad normal (QQ plot) para evaluar la normalidad de la distribución de la RDT, observamos que los datos están cerca de la línea de referencia, pero no caen exactamente sobre ella. Esta ligera discrepancia sugiere una posible desviación de una distribución normal, aunque no es concluyente.
+  
+  3. Conclusiones
+  En resumen, aunque los cambios implementados pueden haber tenido un impacto en las cualidades de separación de los pañuelos, la magnitud de estos cambios y su significancia práctica requieren una evaluación más detallada.
+
+  
+# Solución a ejercicios propuestos
+
+## Varibles discretas EJ 01
+En un juego de azar una persona saca una sola carta de una baraja ordinaria de 52 cartas. A una persona le pagan
+$15 por sacar una “sota” o una reina y $5 por sacar un rey o un as. Alguien que saque cualquier otra carta paga
+$4. Si una persona participa en este juego, ¿cuál es la ganancia esperada? ¿Cómo se interpreta este valor?
+
+  **Solución**
+  
+```{r}
+# Probabilidad  reina
+prob_jota_reina <- 8/52  # Hay 4 jotas y 4 reinas en una baraja de 52 cartas
+
+# Probabilidad de sacar un rey o un as
+prob_rey_as <- 8/52  # Hay 4 reyes y 4 ases en una baraja de 52 cartas
+
+# Probabilidad de sacar cualquier otra carta
+prob_otra_carta <- 1 - prob_jota_reina - prob_rey_as
+
+# Pagos por cada tipo de carta
+pago_jota_reina <- 15
+pago_rey_as <- 5
+pago_otra_carta <- -4
+
+
+# Crear un vector con los tipos de carta
+tipos_carta <- c("Sota/Reina", "Rey/As", "Otra Carta")
+
+# Crear un vector con las probabilidades de cada tipo de carta
+probabilidades <- c(prob_jota_reina, prob_rey_as, prob_otra_carta)
+
+# Crear un vector con los pagos por cada tipo de carta
+pagos <- c(pago_jota_reina, pago_rey_as, pago_otra_carta)
+
+# Tabla
+(tabla_probabilidad <- data.frame(Tipo_de_Carta = tipos_carta, Probabilidad = probabilidades, Pagos = pagos))
+
+
+
+# Calcular la ganancia esperada utilizando la tabla de probabilidad y los pagos
+ganancia_esperada <- sum(probabilidades * pagos)
+
+# Mostrar la ganancia esperada
+ganancia_esperada
+
+
+```
+  
+## Varibles discretas EJ 02
+Supongamos que el número de imperfecciones en un alambre delgado de cobre sigue una distribución Poisson
+con una media de 2.3 imperfecciones por milímetro.
+a) Determine la probabilidad de 2 imperfecciones en un milímetro de alambre.
+
+
+**Solución **
+```{r}
+
+media <- 2.3
+num_imperfecciones <- 2
+
+
+(probabilidad_a <- dpois(num_imperfecciones, lambda = media))
+
+
+```
+  la probabilidad de 2 imperfecciones en un milímetro de alambre es: `r probabilidad_a*100`%
+
+b) Determine la probabilidad de 10 imperfecciones en cinco milímetros de alambre.
+```{r}
+
+num_imperfecciones <- 10
+longitud <- 5
+
+media_b <- media * longitud
+
+(probabilidad_b <- dpois(num_imperfecciones, lambda = media_b))
+
+```
+  a probabilidad de 10 imperfecciones en cinco milímetros de alambre es: `r probabilidad_b*100`%
+
+c) Determine la probabilidad de al menos una imperfección en dos mm de alambre.
+```{r}
+
+longitud <- 2
+media_c <- media * longitud
+
+(probabilidad_c <- 1 - ppois(0, lambda = media_c))
+
+```
+la probabilidad de al menos una imperfección en dos mm de alambre es `r probabilidad_c*100`%
+
+
+## Varibles continuas EJ 01
+a) Los hombres tienen un promedio de estatura mayor que el de las mujeres.
+  
+  **Rta: **
+  
+  si, pues el valor de la media es mayor que el de las mujeres
+b) La estatura de las mujeres tiene mayor variabilidad porque la curva es más alta.
+  
+  **Rta: **
+  
+  no, la figura de la distribuccion de los hombres deja notar que tiene más dispersion que el de las mujeres.
+  
+c) La distribución de las estaturas es simétrica.
+  
+  **Rta: **
+  
+  Si, segun la figuras parece tener las mismas forma de campana hacia la derecha e izquierda.
+  
+d) Es más probable que un hombre tenga estatura entre 75 y 80 a que una mujer tenga estatura en ese intervalo.
+
+  
+  **Rta: **
+  
+  Si, pues la media de los datos de la grafica de los hombres parece estar en 70 lo cual esta mas cerca a estas medidas, pues la media de la mujeres es 65 algo mas alejado de las medidas de 75 y 80
+  
+
+## Varibles continuas EJ 02
+Usando su tabla de probabilidad normal determine las siguientes probabilidades para la variable aleatoria normal estándar
+(Dibuje una curva normal y sombree el área bajo la curva):
+a) P ( Z < 1.32 )
+```{r}
+(probabilidad_a <- pnorm(1.32))
+```
+
+La probabilidad de que una variable aleatoria normal estándar sea menor que 1.32 es aproximadamente 0.9066.
+
+
+b) P ( -2.34 < Z < 1.76 )
+```{r}
+(probabilidad_b <- pnorm(1.76) - pnorm(-2.34))
+
+```
+
+La probabilidad de que una variable aleatoria normal estándar esté entre -2.34 y 1.76 es aproximadamente 0.9207.
+
+c) P ( Z < 3)
+```{r}
+(probabilidad_c <- pnorm(3))
+```
+
+La probabilidad de que una variable aleatoria normal estándar sea menor que 3 es prácticamente 1.
+
+
+d) P ( 0 < Z < 1 )
+```{r}
+(probabilidad_d <- pnorm(1) - pnorm(0))
+```
+
+La probabilidad de que una variable aleatoria normal estándar esté entre 0 y 1 es aproximadamente 0.3413.
+
+e) P ( Z > 1.457 )
+```{r}
+(probabilidad_e <- 1 - pnorm(1.457))
+```
+
+La probabilidad de que una variable aleatoria normal estándar sea mayor que 1.457 es aproximadamente 0.0721.
+
+f) P ( -3 < Z < 3 )
+```{r}
+(probabilidad_f <- pnorm(3) - pnorm(-3))
+```
+
+La probabilidad de que una variable aleatoria normal estándar esté entre -3 y 3 es prácticamente 1
+
+g) P ( Z > -2.153 )
+```{r}
+(probabilidad_g <- 1 - pnorm(-2.153))
+```
+
+La probabilidad de que una variable aleatoria normal estándar sea mayor que -2.153 es aproximadamente 0.9840
+
+
+
+  
+  
+
+
+  
+  
+  
