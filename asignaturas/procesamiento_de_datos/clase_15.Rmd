@@ -1,0 +1,89 @@
+---
+title: "Colombianos en el exterior"
+author: "hugo rodriguez"
+date: "2024-05-25"
+output:
+  beamer_presentation:
+    theme: "AnnArbor"
+    colortheme: "beaver"
+    fonttheme: "structurebold"
+# pagina para temas: https://bookdown.org/yihui/rmarkdown/beamer-presentation.html
+# pagina para conf de temas: https://deic.uab.cat/~iblanes/beamer_gallery/
+header-includes:
+  - \usepackage{ragged2e}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+```
+
+# Descripcion de la base de datos
+
+
+LA base de datos fue descargada del [**_LINK_**](https://www.datos.gov.co/Estad-sticas-Nacionales/Colombianos-registrados-en-el-exterior/y399-rzwf/about_data)
+
+\centerline{\includegraphics[height=1.4 in]{exterior.jpg}}
+
+# Descripcion de la base de datos
+
+```{r}
+require(tidyverse)
+require(janitor)
+require(magrittr)
+```
+
+
+<!-- trabajar con cache -->
+```{r cache=TRUE}
+library(readr)
+bd_colombianos_exterior <- read_csv("data/bd_colombianos_exterior.csv")
+bd_exterior <- clean_names(bd_colombianos_exterior)
+```
+
+
+LA base de datos tiene **`r nrow(bd_exterior)`** registros y **`r ncol(bd_exterior)`** variables.
+
+- __Pais:__ Indica el país de residencia de la persona. Cuando no se tienen datos registrados se presenta el texto (NO REGISTRA)
+
+- __Grupo edad:__ El grupo se basa en la edad de acuerdo a lo siguiente: Entre 0 y 5 años Primera infancia Entre 6 y 11 años Infante Entre 12 y 18 años Adolescente Entre 19 y 28 años Adulto joven Entre 29 y 59 años Adulto Entre 60 en adelante Adulto Mayor.
+
+- __Edad en años:__ Edad de la persona. Cuando no se tienen datos registrados se el valor -1.
+
+- __Estado civil:__ Cuando no se tienen datos registrados se presenta el texto (NO REGISTRA)
+
+- __Genero:__ Cuando no se tienen datos registrados se presenta el texto (DESCONOCIDO)
+
+# Descripcion de la base de datos
+
+- __Etnia de la persona:__ Cuando no se tienen datos registrados se presenta el texto (NO REGISTRA)
+
+- __Localizacion:__ Localización del ciudadano georeferenciada según el país de residencia
+
+
+# Pregunta 1:
+
+* ¿ cual es el nivel academico?
+```{r fig.width=6, fig.height=3}
+bd_exterior %>% filter(pais=="ESTADOS UNIDOS") %>% 
+  ggplot(aes(x= fct_infreq(fct_rev(nivel_academico))))+
+  geom_bar()+
+  coord_flip()+
+  xlab("Nivel Academeimico")
+```
+# Pregunta 1:
+
+* ¿ cual es el pais con más colombianos ?
+```{r }
+total <- nrow(bd_exterior)
+bd_exterior$pais_aux <- bd_exterior %$% fct_lump(pais, n=10, other_level = "otros")
+
+bd_exterior %>% group_by(pais_aux) %>% 
+  summarise(conteo=sum(cantidad_de_personas)) %>% 
+  ggplot(aes(x=reorder(pais_aux,conteo),y=100*conteo/sum(conteo)))+
+  geom_col()+
+  geom_text(aes(label=round(100*conteo/sum(conteo))))+
+  coord_flip()+
+  xlab("C + COL")
+
+```
